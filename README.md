@@ -19,11 +19,27 @@ Clone the repository.
 git clone https://github.com/JackieLi565/burnout-journaling-assistant.git
 ```
 
-Setup a local database via Docker.
+Start the Firebase Local Emulator (required for backend).
 
 ```sh
-docker compose up
+# Install Firebase CLI if not already installed
+npm install -g firebase-tools
+
+# Start the emulator (choose one method):
+# Option 1: Using npm script
+npm run firebase:emulator
+
+# Option 2: Using provided scripts
+# Linux/Mac: ./scripts/start-firebase-emulator.sh
+# Windows: .\scripts\start-firebase-emulator.ps1
+
+# Option 3: Direct command
+firebase emulators:start --only firestore
 ```
+
+The emulator will be available at:
+- Firestore: `localhost:8080`
+- Emulator UI: `http://localhost:4000`
 
 Emulate cloud services locally via Terraform.
 
