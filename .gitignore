@@ -31,9 +31,13 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+firestore-debug.log*
+firebase-debug.log*
+
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -42,7 +46,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# firebase emulator data
-.firestore/
-firestore-debug.log
-firebase-debug.log
+# firebase
+firebase-admin-service-account.json

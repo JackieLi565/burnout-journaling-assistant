@@ -6,9 +6,18 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "firebase:emulator": "firebase emulators:start --only firestore"
+    "emulators": "firebase emulators:start --only auth,firestore,storage --project dev-project-id"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@radix-ui/react-icons": "^1.3.2",
+    "@radix-ui/react-label": "^2.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "firebase": "^12.8.0",
+    "firebase-admin": "^13.6.0",
+    "lucide-react": "^0.563.0",
     "next": "^15.5.4",
     "react": "19.1.0",
     "react-dom": "19.1.0"
@@ -18,7 +27,6 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "tailwindcss": "^4"
   }
 }
