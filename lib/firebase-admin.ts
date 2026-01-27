@@ -1,6 +1,10 @@
 import "server-only";
 import { initializeApp, getApp, getApps, cert } from "firebase-admin/app";
-import { adminConfig, emulatorConfig, firebaseConfig } from "./config";
+import {
+  adminConfig,
+  emulatorConfig,
+  firebaseConfig,
+} from "@/configs/firebase";
 
 export function initAdmin() {
   if (emulatorConfig.useEmulator) {
