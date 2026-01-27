@@ -4,13 +4,7 @@ import { getAuth } from "firebase-admin/auth";
 import { redirect } from "next/navigation";
 import { logoutAction } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function AppPage() {
   const cookieStore = await cookies();
