@@ -30,7 +30,7 @@ import * as z from "zod";
 
 const signupSchema = z
   .object({
-    email: z.string().email("Please enter a valid email address."),
+    email: z.email("Please enter a valid email address."),
     password: z.string().min(6, "Password must be at least 6 characters."),
     confirmPassword: z.string(),
   })
@@ -46,7 +46,6 @@ export function SignupForm() {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const router = useRouter();
 
   const {
     register,

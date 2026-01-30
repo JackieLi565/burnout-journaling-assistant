@@ -7,18 +7,18 @@ import {
 } from "@/configs/firebase";
 
 export function initAdmin() {
+  if (getApps().length > 0) return getApp();
+
   if (emulatorConfig.useEmulator) {
     const { host, authPort, firestorePort, storagePort } = emulatorConfig;
 
     process.env.FIREBASE_AUTH_EMULATOR_HOST = `${host}:${authPort}`;
     process.env.FIRESTORE_EMULATOR_HOST = `${host}:${firestorePort}`;
-    process.env.STORAGE_EMULATOR_HOST = `http://${host}:${storagePort}`;
+    process.env.FIREBASE_STORAGE_EMULATOR_HOST = `${host}:${storagePort}`;
   }
 
-  if (getApps().length > 0) return getApp();
-
   return initializeApp({
-    credential: cert(adminConfig.serviceAccountPath!),
+    credential: cert(adminConfig.serviceAccountPath),
     projectId: firebaseConfig.projectId,
     storageBucket: firebaseConfig.storageBucket,
   });
