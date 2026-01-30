@@ -10,7 +10,6 @@ export async function loginAction(idToken: string, redirectUrl?: string) {
   const app = initAdmin();
   const auth = getAuth(app);
   const db = getFirestore(app);
-
   let decodedToken;
   try {
     decodedToken = await auth.verifyIdToken(idToken);

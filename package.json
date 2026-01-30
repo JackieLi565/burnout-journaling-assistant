@@ -6,7 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "emulators": "firebase emulators:start --only auth,firestore,storage --project dev-project-id"
+    "emulators": "firebase emulators:start --only auth,firestore,storage --project dev-project-id --import=./.firebase/data --export-on-exit=./.firebase/data"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

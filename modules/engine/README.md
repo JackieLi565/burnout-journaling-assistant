@@ -21,22 +21,26 @@ FastAPI backend for managing users and journal entries with Firebase Firestore.
 ### Installation
 
 1. Create a virtual environment:
+
 ```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
 2. Install dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
 
 3. Set up environment variables:
+
 ```bash
 cp .env.example .env
 ```
 
 Edit `.env` and configure:
+
 ```
 # For local development with Firebase Emulator (default)
 USE_EMULATOR=True
@@ -50,6 +54,7 @@ FIREBASE_PROJECT_ID=demo-project
 ```
 
 4. Start the Firebase Local Emulator:
+
 ```bash
 # Option 1: Using npm script (from project root)
 npm run firebase:emulator
@@ -66,6 +71,7 @@ firebase emulators:start --only firestore
 ```
 
 The emulator will start on:
+
 - Firestore: `localhost:8080`
 - Emulator UI: `http://localhost:4000`
 
@@ -84,6 +90,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 The API will be available at:
+
 - API: http://localhost:8000
 - Documentation: http://localhost:8000/docs
 - Alternative docs: http://localhost:8000/redoc
@@ -114,6 +121,7 @@ pytest
 ```
 
 Run with coverage:
+
 ```bash
 pytest --cov=. --cov-report=html
 ```
@@ -121,9 +129,9 @@ pytest --cov=. --cov-report=html
 ## Project Structure
 
 ```
-backend/
+engine/
 ├── main.py                 # FastAPI application entry point
-├── config.py              # Configuration settings
+├── config.py               # Configuration settings
 ├── database.py             # Firebase Firestore connection
 ├── models/                 # Pydantic models
 │   ├── user.py
@@ -157,21 +165,24 @@ The project uses Firebase Local Emulator for development. This allows you to dev
 ### Starting the Emulator
 
 Use the provided scripts:
+
 - **Linux/Mac**: `./scripts/start-firebase-emulator.sh`
 - **Windows**: `.\scripts\start-firebase-emulator.ps1`
 
 Or run directly:
+
 ```bash
 firebase emulators:start --only firestore
 ```
 
-### Emulator UI
+## Tooling
 
-Once the emulator is running, you can access the Emulator UI at:
-- **URL**: http://localhost:4000
+Gemini Live API: https://docs.cloud.google.com/vertex-ai/generative-ai/docs/live-api
+-Live burnout check-ins: Ask users questions by voice/text and get immediate contextual responses.
+-Natural journaling assistant: Create a “smart journal buddy” that helps users reflect on their day and surface emotional insights interactively.
+-Live mood extraction + tools: Combine with function calling so when the user says “I feel overwhelmed with work stress,” our app saves that sentiment and triggers analytics updates in real time.
 
-This provides a web interface to view and manage your Firestore data during development.
-
-### Emulator Data
-
-Emulator data is stored in the `.firestore` directory (automatically created). This data persists between emulator restarts but is typically excluded from version control.
+LangExtract: https://developers.googleblog.com/introducing-langextract-a-gemini-powered-information-extraction-library/
+-Emotion & cause tagging: Turn natural journal text into structured sentiment tags (e.g., “frustrated at work” → {emotion: “frustration”, cause: “work”}).
+-Trend extraction: Pull out regular patterns like recurring stress events or self-reported sleep hours.
+-Dashboard data: Feed structured JSON outputs into analytics (e.g., daily/monthly burnout score trends).

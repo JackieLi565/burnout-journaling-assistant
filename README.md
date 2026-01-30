@@ -1,56 +1,119 @@
-# Burnout journaling Assistant
+# Burnout Journaling Assistant
+
+## Project Architecture
+
+This project is built as a **Privacy-First Orchestrator**, utilizing Next.js as a Backend-for-Frontend (BFF) to handle user interactions and basic data persistence, while delegating complex sentiment analysis to a dedicated Python engine.
+
+### Core Components
+
+1.  **Next.js App (The BFF)**:
+    - Acts as the secure gatekeeper between the Client and the Backend services.
+    - Handles Authentication (Session Minting) and Authorization.
+    - Manages basic CRUD operations (Create, Read, Update, Delete) for journals and user profiles directly via Server Actions.
+    - Communicates internally with the Python Engine for analysis tasks.
+
+2.  **Python Engine (`@modules/engine`)**:
+    - A specialized FastAPI service isolated from direct client access.
+    - Performs heavy-lifting tasks like Sentiment Analysis using **LangExtract**.
+    - Interacts with the shared Firestore database to enrich journal entries with insights.
+    - Secured via Firebase Session validation (passed from the Next.js server).
+
+3.  **Firebase**:
+    - **Authentication**: Handles identity verification.
+    - **Firestore**: Centralized NoSQL database for syncing data between the Next.js BFF and the Python Engine.
+
+### System Workflow
+
+The following diagram illustrates the secure data flow between the Client, Next.js Server, and the Python Analysis Engine.
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Auth as Firebase Auth
+    participant NextJS as Next.js Server (BFF)
+    participant DB as Firestore
+    participant Python as Python Engine
+
+    Note over Client, Auth: 1. Authentication
+    Client->>Auth: Sign In & Request ID Token
+    Auth-->>Client: Returns ID Token
+
+    Note over Client, NextJS: 2. Authorization
+    Client->>NextJS: Send ID Token (Login Action)
+    NextJS->>NextJS: Verify Token & Mint Session Cookie
+    NextJS-->>Client: Set HttpOnly Cookie
+
+    Note over Client, DB: 3. CRUD & Persistence
+    Client->>NextJS: Create Journal Entry (Server Action)
+    NextJS->>NextJS: Validate Session
+    NextJS->>DB: Save Entry
+
+    Note over NextJS, Python: 4. Analysis (LangExtract)
+    NextJS-)Python: Trigger Analysis (Async)
+    Python->>Auth: Verify Session/Auth Context
+    Python->>DB: Fetch Journal Text
+    Python->>Python: Perform Sentiment Analysis
+    Python->>DB: Update Entry with Insights
+```
+
+## Project Structure
+
+The codebase is organized to separate frontend concerns from backend intelligence.
+
+```text
+/
+├── app/                        # Next.js App Router (The Orchestrator)
+│   ├── actions/                # Server Actions (Backend logic running on Next.js server)
+│   ├── app/                    # App pages (Dashboard, Journal, etc.)
+│   └── ...
+│
+├── components/                 # React UI Components
+│   ├── auth/                   # Authentication forms (Sign in/up)
+│   ├── ui/                     # Reusable UI elements (Buttons, Cards, etc.)
+│   └── ...
+│
+├── configs/                    # Shared configurations
+│   └── firebase.ts             # Environment-aware Firebase config
+│
+├── lib/                        # Shared Libraries & SDKs
+│   ├── firebase.ts             # Client-side Firebase SDK
+│   └── firebase-admin.ts       # Server-side Firebase Admin SDK
+│
+└── modules/
+    └── engine/                 # Python Intelligence Engine
+        ├── controllers/        # Business logic for analysis
+        ├── models/             # Pydantic data models
+        ├── routers/            # FastAPI endpoints
+        └── main.py             # Application entry point
+```
 
 ## Getting Started
 
-Ensure you have the following dependencies installed:
+1.  **Clone the repository**
 
-- [Node.js 18.8](https://nodejs.org/en) or later
-- [Docker](https://www.docker.com/)
-- [Terraform](https://developer.hashicorp.com/terraform)
+    ```sh
+    git clone https://github.com/JackieLi565/burnout-journaling-assistant.git
+    ```
 
-Not required but the following does help:
+2.  **Setup Environment Variables**
 
-- [direnv](https://direnv.net/)
-- [migrate](https://github.com/golang-migrate/migrate)
+    ```sh
+    cp .env.example .env.development
+    # Ensure you configure your Firebase credentials within .env.development
+    ```
 
-Clone the repository.
+3.  **Start the Firebase Local Emulator**
+    (Required for local backend development)
 
-```sh
-git clone https://github.com/JackieLi565/burnout-journaling-assistant.git
-```
+    ```sh
+    npm run emulators
+    ```
 
-Start the Firebase Local Emulator (required for backend).
+4.  **Start the Next.js Development Server**
 
-```sh
-# Install Firebase CLI if not already installed
-npm install -g firebase-tools
+    ```sh
+    npm run dev
+    ```
 
-# Start the emulator (choose one method):
-# Option 1: Using npm script
-npm run firebase:emulator
-
-# Option 2: Using provided scripts
-# Linux/Mac: ./scripts/start-firebase-emulator.sh
-# Windows: .\scripts\start-firebase-emulator.ps1
-
-# Option 3: Direct command
-firebase emulators:start --only firestore
-```
-
-The emulator will be available at:
-- Firestore: `localhost:8080`
-- Emulator UI: `http://localhost:4000`
-
-Emulate cloud services locally via Terraform.
-
-```sh
-cd terraform
-
-terraform apply
-```
-
-Start app in development environment.
-
-```sh
-npm run dev
-```
+5.  **Start the Python Engine (Optional for basic CRUD)**
+    Navigate to `@modules/engine` and follow the Python setup instructions in its [README](/modules/engine/README.md).

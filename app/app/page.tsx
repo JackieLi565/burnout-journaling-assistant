@@ -1,10 +1,9 @@
 import { cookies } from "next/headers";
-import { initAdmin } from "@/lib/firebase-admin";
-import { getAuth } from "firebase-admin/auth";
 import { redirect } from "next/navigation";
 import { logoutAction } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { verifySession } from "@/lib/auth-rsc";
 
 export default async function AppPage() {
   const cookieStore = await cookies();
@@ -14,13 +13,12 @@ export default async function AppPage() {
     redirect("/signin");
   }
 
-  const app = initAdmin();
-  const auth = getAuth(app);
   let decodedToken;
   try {
-    decodedToken = await auth.verifySessionCookie(sessionCookie, true);
+    decodedToken = await verifySession(sessionCookie);
   } catch (e) {
-    redirect("/signin");
+    // Should be handled by layout, but for safety/type narrowing:
+    redirect("/api/logout");
   }
 
   return (
