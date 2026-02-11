@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { verifySession } from "@/lib/auth-rsc";
 
+/* test change for commit */
+
 export default async function AppPage() {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("__session")?.value;
