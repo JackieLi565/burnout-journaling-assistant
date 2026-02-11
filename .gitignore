@@ -47,6 +47,6 @@ next-env.d.ts
 
 # firebase
 firebase-admin-service-account.json
-.firebase_data/
 *-debug.log
 ui-debug.log
+.firebase/
