@@ -6,7 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { verifySession } from "@/lib/auth-rsc";
 
 /* test change for commit */
-
+/*
+- everything under /app/ path for regular app
+- stuff like /signup/ gets placed outside /app/ directory
+- integrate quiz into popup, not necessarily its own route. pops up like dialog box for user to do on the fly. this is placed under app route
+- for journaling:
+    - left side: list of all journals ordered by time, able to click to pull up and reread. should be locked to once daily?
+    - grouped by day, in order of time placed in that day
+    - edits and additions are limited to current day. cant backdate journal entries
+    - left sidebar lists by only date (maybe small ai-generated header summary?)
+    - change survey format to only one question at a time w/ next button and numCompleted/numTotal display
+ */
 export default async function AppPage() {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("__session")?.value;
