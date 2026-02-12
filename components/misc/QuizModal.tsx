@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
-import { Button } from "@/components/ui/button";
+import {useState, useEffect} from "react";
+import {createPortal} from "react-dom";
+import {Button} from "@/components/ui/button";
+import {submitQuizResult} from "@/app/actions/quiz";
 
 // Constants moved outside component to avoid re-creation on render
 const SCALE = [
-    { value: 0, label: "Strongly Agree" },
-    { value: 1, label: "Agree" },
-    { value: 2, label: "Disagree" },
-    { value: 3, label: "Strongly Disagree" },
+    {value: 0, label: "Strongly Agree"},
+    {value: 1, label: "Agree"},
+    {value: 2, label: "Disagree"},
+    {value: 3, label: "Strongly Disagree"},
 ];
 
 const QUESTIONS = [
@@ -41,6 +42,7 @@ export default function QuizModal() {
     const [isOpen, setIsOpen] = useState(false);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [responses, setResponses] = useState<Record<number, number>>({});
+    const [isSubmitting, setIsSubmitting] = useState(false); // New state
 
     // Prevent background scrolling when modal is open
     useEffect(() => {
@@ -52,16 +54,28 @@ export default function QuizModal() {
     }, [isOpen]);
 
     const handleSelect = (value: number) => {
-        setResponses((prev) => ({ ...prev, [currentIndex]: value }));
+        setResponses((prev) => ({...prev, [currentIndex]: value}));
     };
 
-    const handleNext = () => {
+    const handleNext = async () => {
         if (currentIndex < QUESTIONS.length - 1) {
             setCurrentIndex((prev) => prev + 1);
         } else {
-            // Logic for final submission goes here
-            // e.g. await submitQuiz(responses);
-            setIsOpen(false);
+            // === THIS IS THE NEW PART ===
+            setIsSubmitting(true);
+
+            const result = await submitQuizResult(responses);
+
+            setIsSubmitting(false);
+
+            if (result.success) {
+                setIsOpen(false);
+                // Optional: Reset form for next time
+                setCurrentIndex(0);
+                setResponses({});
+            } else {
+                alert("Error saving quiz: " + result.error);
+            }
         }
     };
 
@@ -71,31 +85,25 @@ export default function QuizModal() {
         }
     };
 
-    // Helper to reset quiz when opening (optional)
-    const openModal = () => {
-        // If you want to reset every time they open it, uncomment lines below:
-        // setCurrentIndex(0);
-        // setResponses({});
-        setIsOpen(true);
-    };
+    // ... (Keep helper openModal) ...
+    const openModal = () => setIsOpen(true);
+
 
     return (
         <>
-            {/* Trigger Button */}
             <Button onClick={openModal}>Start Daily Quiz</Button>
 
-            {/* Modal Overlay */}
             {isOpen &&
                 createPortal(
                     <div
                         className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-                        onClick={() => setIsOpen(false)}
+                        onClick={() => !isSubmitting && setIsOpen(false)} // Prevent close while submitting
                     >
                         <div
                             className="bg-white text-black p-8 rounded-xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col gap-6 relative"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            {/* Header: Progress */}
+                            {/* Header */}
                             <div className="flex justify-between items-center border-b pb-4">
                                 <h2 className="text-xl font-bold">Daily Check-in</h2>
                                 <span className="text-sm font-medium text-muted-foreground">
@@ -103,7 +111,7 @@ export default function QuizModal() {
                 </span>
                             </div>
 
-                            {/* Body: Question & Options */}
+                            {/* Body */}
                             <div className="py-4 space-y-6">
                                 <h3 className="text-lg font-medium text-center min-h-[60px] flex items-center justify-center">
                                     {QUESTIONS[currentIndex]}
@@ -116,6 +124,7 @@ export default function QuizModal() {
                                             <button
                                                 key={option.value}
                                                 onClick={() => handleSelect(option.value)}
+                                                disabled={isSubmitting}
                                                 className={`p-3 text-sm rounded-lg border transition-all ${
                                                     isSelected
                                                         ? "bg-black text-white border-black"
@@ -129,25 +138,29 @@ export default function QuizModal() {
                                 </div>
                             </div>
 
-                            {/* Footer: Navigation */}
+                            {/* Footer */}
                             <div className="flex justify-between items-center pt-4 border-t">
                                 <Button
                                     variant="outline"
                                     onClick={handlePrev}
-                                    disabled={currentIndex === 0}
+                                    disabled={currentIndex === 0 || isSubmitting}
                                 >
                                     Previous
                                 </Button>
 
                                 <div className="flex gap-2">
-                                    <Button variant="ghost" onClick={() => setIsOpen(false)}>
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() => setIsOpen(false)}
+                                        disabled={isSubmitting}
+                                    >
                                         Cancel
                                     </Button>
                                     <Button
                                         onClick={handleNext}
-                                        disabled={responses[currentIndex] === undefined} // Disable Next until they answer
+                                        disabled={responses[currentIndex] === undefined || isSubmitting}
                                     >
-                                        {currentIndex === QUESTIONS.length - 1 ? "Submit" : "Next"}
+                                        {isSubmitting ? "Saving..." : (currentIndex === QUESTIONS.length - 1 ? "Submit" : "Next")}
                                     </Button>
                                 </div>
                             </div>
