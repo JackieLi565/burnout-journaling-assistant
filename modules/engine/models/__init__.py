@@ -1,6 +1,14 @@
 """Models package."""
 from .user import User, UserCreate, UserUpdate, UserBase
 from .journal import Journal, JournalCreate, JournalUpdate, JournalBase
+from .burnout import (
+    BurnoutRiskIndex,
+    BurnoutFeature,
+    MBIScore,
+    MBIDimension,
+    EmotionType,
+    AnalysisRequest,
+)
 
 __all__ = [
     "User",
@@ -11,4 +19,10 @@ __all__ = [
     "JournalCreate",
     "JournalUpdate",
     "JournalBase",
+    "BurnoutRiskIndex",
+    "BurnoutFeature",
+    "MBIScore",
+    "MBIDimension",
+    "EmotionType",
+    "AnalysisRequest",
 ]

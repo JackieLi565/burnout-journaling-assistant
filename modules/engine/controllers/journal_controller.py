@@ -4,6 +4,9 @@ from datetime import datetime
 from firebase_admin import firestore
 from database import db, JOURNALS_COLLECTION, USERS_COLLECTION
 from models.journal import Journal, JournalCreate, JournalUpdate
+from models.burnout import BurnoutRiskIndex
+from services.burnout_analysis import BurnoutAnalysisService
+from config import settings
 
 class JournalController:
     """Controller for journal operations."""
@@ -137,3 +140,60 @@ class JournalController:
         
         journal_ref.delete()
         return True
+    
+    @staticmethod
+    def analyze_journal(journal_id: str) -> Optional[BurnoutRiskIndex]:
+        """
+        Analyze a journal entry for burnout risk.
+        
+        Args:
+            journal_id: ID of the journal entry to analyze
+        
+        Returns:
+            BurnoutRiskIndex with analysis results, or None if journal not found
+        """
+        journal = JournalController.get_journal(journal_id)
+        if not journal:
+            return None
+        
+        # Initialize analysis service
+        analysis_service = BurnoutAnalysisService(api_key=settings.GEMINI_API_KEY) #use your own gemini api key if u need to
+        
+        # Combine title and content for analysis
+        text_to_analyze = f"{journal.title}\n{journal.content}"
+        
+        # Perform analysis
+        result = analysis_service.analyze(text_to_analyze)
+        
+        # Update journal entry with analysis results (optional)
+        journal_ref = db.collection(JOURNALS_COLLECTION).document(journal_id)
+        journal_ref.update({
+            "burnout_analysis": {
+                "overall_score": result.overall_score,
+                "risk_level": result.risk_level,
+                "emotional_exhaustion": result.emotional_exhaustion.normalized_score,
+                "depersonalization": result.depersonalization.normalized_score,
+                "personal_accomplishment": result.personal_accomplishment.normalized_score,
+                "analyzed_at": datetime.utcnow()
+            },
+            "updated_at": datetime.utcnow()
+        })
+        
+        return result
+    
+    @staticmethod
+    def analyze_text(text: str) -> BurnoutRiskIndex:
+        """
+        Analyze raw text for burnout risk.
+        
+        Args:
+            text: Text to analyze
+        
+        Returns:
+            BurnoutRiskIndex with analysis results
+        """
+        # Initialize analysis service
+        analysis_service = BurnoutAnalysisService(api_key=settings.GEMINI_API_KEY) #use your own gemini api key if u need to
+        
+        # Perform analysis
+        return analysis_service.analyze(text)

@@ -24,6 +24,9 @@ class Settings:
     # API Configuration
     API_V1_PREFIX: str = "/api/v1"
     
+    # Gemini/LangExtract Configuration
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    
     class Config:
         case_sensitive = True
 
