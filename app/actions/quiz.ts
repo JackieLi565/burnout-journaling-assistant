@@ -21,7 +21,7 @@ export async function submitQuizResult(responses: Record<number, number>) {
         if (!uid) {
             return { success: false, error: "Invalid user ID" };
         }
-
+        console.log("User Authenticated:", uid); //TODO remove
         // 2. Prepare the data for the Python engine
         // We save a timestamp so the Python script knows which one is new
         const quizData = {
@@ -36,7 +36,7 @@ export async function submitQuizResult(responses: Record<number, number>) {
             .doc(uid)
             .collection("quizzes")
             .add(quizData);
-
+        console.log("Data saved to Firestore!");//TODO remove
         return { success: true };
 
     } catch (error) {

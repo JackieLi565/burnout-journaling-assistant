@@ -4,7 +4,7 @@ import { logoutAction } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { verifySession } from "@/lib/auth-rsc";
-import QuizModal from "@/components/misc/QuizModal"; // <--- Import logic here
+import QuizModal from "@/components/misc/QuizModal";
 
 export default async function AppPage() {
     const cookieStore = await cookies();
@@ -33,7 +33,7 @@ export default async function AppPage() {
                     </form>
                 </div>
 
-                {/* Action Section - You can place the modal trigger here */}
+                {/*/!* Action Section - You can place the modal trigger here *!/ TODO what????*/}
                 <div className="flex gap-4">
                     <QuizModal />
                 </div>
