@@ -14,5 +14,8 @@ namespace NodeJS {
     NEXT_PUBLIC_FIREBASE_STORAGE_EMULATOR_PORT: string;
 
     FIREBASE_SERVICE_ACCOUNT_PATH: string;
+    GEMINI_API_KEY: string;
+    GEMINI_LIVE_MODEL: string;
+    PYTHON_ENGINE_URL: string;
   }
 }

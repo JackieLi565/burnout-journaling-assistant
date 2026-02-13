@@ -11,6 +11,7 @@ This project is built as a **Privacy-First Orchestrator**, utilizing Next.js as 
     - Handles Authentication (Session Minting) and Authorization.
     - Manages basic CRUD operations (Create, Read, Update, Delete) for journals and user profiles directly via Server Actions.
     - Communicates internally with the Python Engine for analysis tasks.
+    - Mints short-lived Gemini Live ephemeral tokens so the browser can open live sessions without exposing long-lived API keys.
 
 2.  **Python Engine (`@modules/engine`)**:
     - A specialized FastAPI service isolated from direct client access.
@@ -117,3 +118,17 @@ The codebase is organized to separate frontend concerns from backend intelligenc
 
 5.  **Start the Python Engine (Optional for basic CRUD)**
     Navigate to `@modules/engine` and follow the Python setup instructions in its [README](/modules/engine/README.md).
+
+## Live Voice + Sentiment Setup
+
+Add these variables to your local environment file:
+
+```sh
+GEMINI_API_KEY=your-gemini-api-key
+GEMINI_LIVE_MODEL=models/gemini-2.0-flash-live-001
+PYTHON_ENGINE_URL=http://localhost:8000
+```
+
+- `/api/live/session` verifies the Firebase `__session` cookie and creates a Gemini ephemeral token.
+- `/api/journal/analyze` verifies the same session, proxies text to the Python analyzer, and returns a normalized sentiment label.
+- The journal page supports browser dictation (speech-to-text), Gemini Live coaching response, and browser text-to-speech playback.
