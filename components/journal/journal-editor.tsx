@@ -20,7 +20,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { useAnalysis } from "@/components/analysis-provider";
+import { useRouter } from "next/navigation";
 
 interface JournalEditorProps {
   date: string;
@@ -29,6 +36,8 @@ interface JournalEditorProps {
 
 export function JournalEditor({ date, initialEntries }: JournalEditorProps) {
   const { state, isMobile } = useSidebar();
+  const { setAnalysisResult, setIsAnalyzing } = useAnalysis();
+  const router = useRouter();
 
   // State
   const [entries, setEntries] = useState<Entry[]>(initialEntries);
@@ -234,9 +243,50 @@ export function JournalEditor({ date, initialEntries }: JournalEditorProps) {
             </Tooltip>
           </TooltipProvider>
 
-          <Button variant="ghost" size="icon" title="Settings">
-            <Settings2 className="w-4 h-4" />
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" title="Settings">
+                <Settings2 className="w-4 h-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48">
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <h4 className="font-medium leading-none">Settings</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Journal entry options
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    setIsAnalyzing(true);
+                    try {
+                      const response = await fetch(
+                        "http://localhost:8000/journals/analyze",
+                        {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                          },
+                          body: JSON.stringify({ text: content }),
+                        },
+                      );
+                      const data = await response.json();
+                      setAnalysisResult(data);
+                      router.push("/app/statistics");
+                    } catch (error) {
+                      console.error("Analysis failed:", error);
+                    } finally {
+                      setIsAnalyzing(false);
+                    }
+                  }}
+                >
+                  Analyze
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
