@@ -12,4 +12,4 @@ if (emulatorConfig.useEmulator) {
   connectAuthEmulator(auth, `http://${host}:${authPort}`);
 }
 
-export { auth };
+export { auth, app };

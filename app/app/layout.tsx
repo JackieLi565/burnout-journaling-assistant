@@ -1,34 +1,24 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { verifySession } from "@/lib/auth-rsc";
-import Navbar from "@/components/misc/Navbar";
+import { JournalSidebar } from "@/components/journal/journal-sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { getUserProfile } from "@/app/actions/profile";
+import { getCurrentDateInTimezone } from "@/utils/date";
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("__session")?.value;
-
-  if (!sessionCookie) {
-    redirect("/signin");
-  }
-
-  try {
-    await verifySession(sessionCookie);
-  } catch (e) {
-    console.error(
-      "Invalid session in AppLayout, redirecting to logout handler:",
-      e,
-    );
-    redirect("/api/logout");
-  }
+  const profile = await getUserProfile();
+  const today = getCurrentDateInTimezone(profile.timezone);
 
   return (
-    <>
-      <Navbar />
-      {children}
-    </>
+    <SidebarProvider>
+      <div className="flex h-screen w-full overflow-hidden">
+        <JournalSidebar today={today} />
+        <main className="flex-1 overflow-hidden h-full relative flex flex-col w-full">
+          {children}
+        </main>
+      </div>
+    </SidebarProvider>
   );
 }
