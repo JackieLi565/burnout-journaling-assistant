@@ -9,15 +9,15 @@ export default function Navbar() {
       <div className="flex gap-6 text-sm font-medium">
         <Link
           href="/app/journal"
-          className="hover:text-blue-600 transition-colors"
+          className="px-4 py-2 bg-foreground text-background rounded-full hover:opacity-90 transition-opacity"
         >
           Journal
         </Link>
         <Link
-          href="/app/quiz"
-          className="hover:text-blue-600 transition-colors"
+          href="/app/stats"
+          className="px-4 py-2 bg-foreground text-background rounded-full hover:opacity-90 transition-opacity"
         >
-          Quiz
+          Stats
         </Link>
         <Link
           href="/signin"
