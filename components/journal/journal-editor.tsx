@@ -263,7 +263,7 @@ export function JournalEditor({ date, initialEntries }: JournalEditorProps) {
                     setIsAnalyzing(true);
                     try {
                       const response = await fetch(
-                        "http://localhost:8000/journals/analyze",
+                        "http://localhost:8000/api/v1/journals/analyze",
                         {
                           method: "POST",
                           headers: {
