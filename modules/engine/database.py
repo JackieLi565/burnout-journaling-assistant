@@ -12,7 +12,7 @@ def initialize_firebase():
         if settings.USE_EMULATOR:
             # Use Firebase Emulator
             os.environ["FIRESTORE_EMULATOR_HOST"] = settings.FIRESTORE_EMULATOR_HOST
-            cred = credentials.Certificate("")#gotta use some actual credentials here foir the emulator idek why 
+            cred = credentials.Certificate("C:/Users/Jonah/Documents/_Schoolwork/University/COE70AB/Application/burnout-journaling-assistant/capstone-64f78-firebase-adminsdk-fbsvc-22f94137ca.json")#gotta use some actual credentials here foir the emulator idek why
             # Initialize with default credentials for emulator
             firebase_admin.initialize_app(
                 cred,

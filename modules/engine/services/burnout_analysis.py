@@ -414,47 +414,47 @@ class BurnoutAnalysisService:
         return result
 
 #Test run of langextract python -m services.burnout_analysis for testing langextract
-# if __name__ == "__main__":
-#     import os
-#     import sys
+if __name__ == "__main__":
+    import os
+    import sys
 
-#     # Allow running as script from engine root: python -m services.burnout_analysis
-#     engine_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-#     if engine_root not in sys.path:
-#         sys.path.insert(0, engine_root)
-#     os.chdir(engine_root)
+    # Allow running as script from engine root: python -m services.burnout_analysis
+    engine_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if engine_root not in sys.path:
+        sys.path.insert(0, engine_root)
+    os.chdir(engine_root)
 
-#     # Optional: load .env for GEMINI_API_KEY
-#     try:
-#         from dotenv import load_dotenv
-#         load_dotenv()
-#     except ImportError:
-#         pass
+    # Optional: load .env for GEMINI_API_KEY
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except ImportError:
+        pass
 
-#     api_key = os.getenv("GEMINI_API_KEY", "")
-#     service = BurnoutAnalysisService(api_key=api_key or None)
+    api_key = os.getenv("GEMINI_API_KEY", "")
+    service = BurnoutAnalysisService(api_key=api_key or None)
 
-#     sample_text = """
-#     I'm so exhausted and overwhelmed with work.
-#     I don't care anymore about the meetings.
-#     Today I actually accomplished something
-#     and felt proud of the progress.
-#     But the stress is still there.
-#     """
+    sample_text = """
+    I'm so exhausted and overwhelmed with work.
+    I don't care anymore about the meetings.
+    Today I actually accomplished something
+    and felt proud of the progress.
+    But the stress is still there.
+    """
 
-#     print("Burnout Analysis Service – test run")
-#     print("Using LangExtract:", service.use_langextract)
-#     print("-" * 50)
+    print("Burnout Analysis Service – test run")
+    print("Using LangExtract:", service.use_langextract)
+    print("-" * 50)
 
-#     result = service.analyze(sample_text)
+    result = service.analyze(sample_text)
 
-#     print("Overall score:", result.overall_score)
-#     print("Risk level:", result.risk_level)
-#     print("Text length:", result.text_length)
-#     print("Sentence count:", result.sentence_count)
-#     print("EE (normalized):", result.emotional_exhaustion.normalized_score)
-#     print("DP (normalized):", result.depersonalization.normalized_score)
-#     print("PA (normalized):", result.personal_accomplishment.normalized_score)
-#     print("Features extracted:", len(result.features))
-#     print("-" * 50)
-#     print("OK – burnout analysis ran successfully.")
+    print("Overall score:", result.overall_score)
+    print("Risk level:", result.risk_level)
+    print("Text length:", result.text_length)
+    print("Sentence count:", result.sentence_count)
+    print("EE (normalized):", result.emotional_exhaustion.normalized_score)
+    print("DP (normalized):", result.depersonalization.normalized_score)
+    print("PA (normalized):", result.personal_accomplishment.normalized_score)
+    print("Features extracted:", len(result.features))
+    print("-" * 50)
+    print("OK – burnout analysis ran successfully.")
