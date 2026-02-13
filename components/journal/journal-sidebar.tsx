@@ -14,8 +14,10 @@ import {
   CircleHelp,
   LogOut,
   Settings,
+  ClipboardCheck,
 } from "lucide-react";
 import { useJournals, Journal } from "@/hooks/use-journals";
+import QuizModal from "@/components/misc/QuizModal";
 
 import {
   Popover,
@@ -87,6 +89,16 @@ export function JournalSidebar({ today }: JournalSidebarProps) {
                   <span>Statistics</span>
                 </Link>
               </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <QuizModal
+                trigger={
+                  <SidebarMenuButton tooltip="Daily Quiz">
+                    <ClipboardCheck className="size-4" />
+                    <span>Daily Quiz</span>
+                  </SidebarMenuButton>
+                }
+              />
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroupContent>

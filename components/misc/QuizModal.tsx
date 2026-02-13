@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react"; // 1. Import useCallback
+import React, { useState, useEffect, useCallback } from "react"; // 1. Import useCallback
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { submitQuizResult } from "@/app/actions/quiz";
@@ -38,7 +38,7 @@ const QUESTIONS = [
     "I feel refreshed when I have been close to my patients/clients at work.",
 ];
 
-export default function QuizModal() {
+export default function QuizModal({ trigger }: { trigger?: React.ReactNode }) {
     const [isOpen, setIsOpen] = useState(false);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [responses, setResponses] = useState<Record<number, number>>({});
@@ -113,7 +113,13 @@ export default function QuizModal() {
 
     return (
         <>
-            <Button onClick={openModal}>Start Daily Quiz</Button>
+            {trigger ? (
+                <div onClick={openModal} className="cursor-pointer w-full">
+                    {trigger}
+                </div>
+            ) : (
+                <Button onClick={openModal} variant="outline">Daily Quiz</Button>
+            )}
 
             {isOpen &&
                 createPortal(
