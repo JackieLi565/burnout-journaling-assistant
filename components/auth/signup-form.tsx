@@ -58,30 +58,36 @@ export function SignupForm() {
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError(null);
+    let idToken: string | undefined;
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      const idToken = await result.user.getIdToken();
-      await loginAction(idToken);
+      idToken = await result.user.getIdToken();
     } catch (err) {
       const e = err as AuthError;
       console.error("Signup failed", e);
       setError("Failed to sign up with Google. Please try again.");
       setLoading(false);
+      return;
+    }
+
+    if (idToken) {
+      await loginAction(idToken);
     }
   };
 
   const onSubmit = async (data: SignupFormData) => {
     setLoading(true);
     setError(null);
+    let idToken: string | undefined;
+
     try {
       const result = await createUserWithEmailAndPassword(
         auth,
         data.email,
         data.password,
       );
-      const idToken = await result.user.getIdToken();
-      await loginAction(idToken);
+      idToken = await result.user.getIdToken();
     } catch (err) {
       const e = err as AuthError;
       console.error("Signup failed", e);
@@ -105,6 +111,11 @@ export function SignupForm() {
 
       setError(message);
       setLoading(false);
+      return;
+    }
+
+    if (idToken) {
+      await loginAction(idToken);
     }
   };
 
@@ -117,6 +128,14 @@ export function SignupForm() {
       <CardContent>
         <form
           onSubmit={handleSubmit(onSubmit)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              if ((e.target as HTMLElement).tagName === "INPUT") {
+                e.preventDefault();
+                handleSubmit(onSubmit)();
+              }
+            }
+          }}
           className="grid w-full items-center gap-4"
         >
           {error && (
