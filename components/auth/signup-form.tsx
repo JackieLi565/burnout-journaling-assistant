@@ -55,6 +55,21 @@ export function SignupForm() {
     resolver: zodResolver(signupSchema),
   });
 
+  // Handle Enter key globally for this component
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        const target = e.target as HTMLElement;
+        if (target.tagName !== "TEXTAREA") {
+          handleSubmit(onSubmit)();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleSubmit]);
+
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError(null);
@@ -128,14 +143,6 @@ export function SignupForm() {
       <CardContent>
         <form
           onSubmit={handleSubmit(onSubmit)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              if ((e.target as HTMLElement).tagName === "INPUT") {
-                e.preventDefault();
-                handleSubmit(onSubmit)();
-              }
-            }
-          }}
           className="grid w-full items-center gap-4"
         >
           {error && (
