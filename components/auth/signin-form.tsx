@@ -47,33 +47,55 @@ export function SigninForm() {
     resolver: zodResolver(signinSchema),
   });
 
+  // Handle Enter key globally for this component
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        // Prevent submission if user is in a textarea or another button (optional)
+        const target = e.target as HTMLElement;
+        if (target.tagName !== "TEXTAREA") {
+          handleSubmit(onSubmit)();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleSubmit]);
+
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError(null);
+    let idToken: string | undefined;
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      const idToken = await result.user.getIdToken();
-      await loginAction(idToken);
+      idToken = await result.user.getIdToken();
     } catch (err) {
       const e = err as AuthError;
       console.error("Login failed", e);
       setError("Failed to sign in with Google. Please try again.");
       setLoading(false);
+      return;
+    }
+
+    if (idToken) {
+      await loginAction(idToken);
     }
   };
 
   const onSubmit = async (data: SigninFormData) => {
     setLoading(true);
     setError(null);
+    let idToken: string | undefined;
+
     try {
       const result = await signInWithEmailAndPassword(
         auth,
         data.email,
         data.password,
       );
-      const idToken = await result.user.getIdToken();
-      await loginAction(idToken);
+      idToken = await result.user.getIdToken();
     } catch (err) {
       const e = err as AuthError;
 
@@ -99,6 +121,11 @@ export function SigninForm() {
 
       setError(message);
       setLoading(false);
+      return;
+    }
+
+    if (idToken) {
+      await loginAction(idToken);
     }
   };
 
