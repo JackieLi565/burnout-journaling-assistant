@@ -25,6 +25,7 @@
 *.pem
 .vscode/
 .idea/
+raw_data/
 
 # debug
 npm-debug.log*
