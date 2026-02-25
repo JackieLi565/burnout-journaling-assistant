@@ -7,6 +7,7 @@
     "dev:remote": "npx dotenv-cli -e .env.remote -- next dev --turbopack",
     "migrate:remote": "npx ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/migrate-to-remote.ts",
     "reconcile:auth": "npx ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/reconcile-auth.ts",
+    "seed:remote": "npx ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/seed-mock-data.ts",
     "build": "next build --turbopack",
     "start": "next start",
     "emulators": "firebase emulators:start --only auth,firestore,storage --project dev-project-id --import=./.firebase/data --export-on-exit=./.firebase/data"
