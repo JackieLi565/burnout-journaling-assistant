@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "dev:remote": "npx dotenv-cli -e .env.remote -- next dev --turbopack",
+    "migrate:remote": "npx ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/migrate-to-remote.ts",
     "build": "next build --turbopack",
     "start": "next start",
     "emulators": "firebase emulators:start --only auth,firestore,storage --project dev-project-id --import=./.firebase/data --export-on-exit=./.firebase/data"
@@ -36,12 +37,13 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^20.19.33",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv-cli": "^11.0.0",
     "firebase-tools": "^15.6.0",
     "tailwindcss": "^4",
-    "typescript": "5.9.3"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }
