@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "dev:remote": "npx dotenv-cli -e .env.remote -- next dev --turbopack",
+    "dev:remote": "powershell -Command \"if (Test-Path .env.local) { Rename-Item .env.local .env.local.bak }; try { npx dotenv-cli -e .env.remote -- next dev --turbopack } finally { if (Test-Path .env.local.bak) { Rename-Item .env.local.bak .env.local } }\"",
     "migrate:remote": "npx ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/migrate-to-remote.ts",
     "reconcile:auth": "npx ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/reconcile-auth.ts",
     "seed:remote": "npx ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/seed-mock-data.ts",

@@ -1,27 +1,45 @@
-"use client";
+import { Suspense } from "react";
+import { getHrvStats } from "@/app/actions/hrv";
+import HrvChart from "@/components/statistics/HrvChart";
+import { Skeleton } from "@/components/ui/skeleton";
 
-import { useAnalysis } from "@/components/analysis-provider";
+async function HrvStatsSection() {
+  const data = await getHrvStats();
+  return <HrvChart data={data} />;
+}
 
-export default function Page() {
-  const { analysisResult } = useAnalysis();
-
-  if (!analysisResult) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-        <p>No analysis data available.</p>
-        <p className="text-sm">
-          Go to the journal page and click "Analyze" on an entry.
+export default function StatisticsPage() {
+  return (
+    <div className="p-8 space-y-8 max-w-6xl mx-auto">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Physiological Insights</h1>
+        <p className="text-muted-foreground mt-2">
+          Visualize your heart rate variability data over time to monitor recovery and stress levels.
         </p>
       </div>
-    );
-  }
 
-  return (
-    <div className="p-8 h-full overflow-y-auto">
-      <h1 className="text-2xl font-bold mb-4">Analysis Result</h1>
-      <pre className="bg-muted p-4 rounded-lg overflow-auto text-sm font-mono whitespace-pre-wrap">
-        {JSON.stringify(analysisResult, null, 2)}
-      </pre>
+      <div className="grid gap-6">
+        <Suspense fallback={<Skeleton className="w-full h-[450px] rounded-xl" />}>
+          <HrvStatsSection />
+        </Suspense>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+        <div className="p-6 rounded-xl border bg-card/50">
+          <h3 className="font-semibold mb-2">How to read this chart</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Higher HRV (RMSSD/SDNN) values generally indicate better cardiovascular fitness and resilience to stress. 
+            Significant drops in these metrics over several days may signal overtraining, high stress, or illness.
+          </p>
+        </div>
+        <div className="p-6 rounded-xl border bg-card/50">
+          <h3 className="font-semibold mb-2">Data Source</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            These metrics are calculated from the heart rate sensor data recorded during your daily check-ins 
+            and processed via our physiological analysis engine.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
