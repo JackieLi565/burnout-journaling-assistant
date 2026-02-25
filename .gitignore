@@ -38,7 +38,6 @@ firebase-debug.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
-!.env.remote
 venv/
 .venv
 
@@ -51,6 +50,7 @@ next-env.d.ts
 
 # firebase
 firebase-admin-service-account.json
+service-account.remote.json
 *-debug.log
 ui-debug.log
 .firebase/
