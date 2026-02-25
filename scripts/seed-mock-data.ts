@@ -37,29 +37,38 @@ async function run() {
     for (let j = 0; j < entryCount; j++) {
       await journalRef.collection("entries").add({
         content: `This is a mock entry for ${dateStr}. Random thought #${j + 1}.`,
-        createdAt: Timestamp.fromDate(new Date(date.getTime() + (j * 3600000))), // Spread entries by hour
+        createdAt: Timestamp.fromDate(new Date(date.getTime() + (j * 3600000))), 
         updatedAt: Timestamp.fromDate(new Date(date.getTime() + (j * 3600000)))
       });
     }
 
-    // 3. Add Quiz Result
-    // Generate 10 random responses (0-3)
+    // 3. Add Quiz Result with linked HRV data
     const responses: Record<number, number> = {};
     for (let q = 0; q < 10; q++) {
-        // Create a trend: higher scores at the start of the month, lower at the end (or vice versa)
         const trendBase = i > 15 ? 2 : 1; 
         responses[q] = Math.max(0, Math.min(3, Math.floor(Math.random() * 2) + trendBase));
     }
 
+    // Generate mock HRV data based on the stress level (lower RMSSD/SDNN = higher stress)
+    const stressFactor = Object.values(responses).reduce((a, b) => a + b, 0) / 30; // 0 to 1
+    
     await db.collection(`users/${TARGET_UID}/quizzes`).add({
       responses,
       completedAt: Timestamp.fromDate(date),
-      processed: true
+      processed: true,
+      processedAt: Timestamp.fromDate(date),
+      // Mocked HRV metrics based on the real dataset format
+      hrvData: {
+          heartRate: 70 + (stressFactor * 20) + (Math.random() * 5), // 70-95 BPM
+          rmssd: 100 - (stressFactor * 60) + (Math.random() * 10),    // 40-110 ms
+          sdnn: 90 - (stressFactor * 50) + (Math.random() * 10),      // 40-100 ms
+          pnn50: 0.8 - (stressFactor * 0.5),                          // 0.3-0.8
+          source: "seeded_from_dataset"
+      }
     });
   }
 
-  console.log("
-Seeding completed successfully!");
+  console.log("\nSeeding completed successfully!");
   await deleteApp(app);
 }
 
