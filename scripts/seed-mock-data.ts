@@ -1,12 +1,12 @@
 import { initializeApp, cert, deleteApp } from "firebase-admin/app";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import * as fs from "fs";
+import { parse } from "csv-parse/sync";
 
 async function run() {
   const SERVICE_ACCOUNT_PATH = "./service-account.remote.json";
   const serviceAccount = JSON.parse(fs.readFileSync(SERVICE_ACCOUNT_PATH, "utf8"));
   
-  // Use your actual UID
   const TARGET_UID = "G2h62uVlMo91xe9UeLHKgTt5oenC"; 
 
   const app = initializeApp({
@@ -14,58 +14,92 @@ async function run() {
   });
   const db = getFirestore(app);
 
-  console.log(`--- Seeding 30 days of data for UID: ${TARGET_UID} ---`);
+  console.log(`--- Seeding REAL dataset data for UID: ${TARGET_UID} ---`);
 
-  const now = new Date();
+  // 1. Load Data
+  console.log("Loading CSV files...");
+  const hrvRaw = fs.readFileSync("raw_data/sensor_hrv.csv", "utf8");
+  const sleepRaw = fs.readFileSync("raw_data/sleep_diary.csv", "utf8");
+  const surveyRaw = fs.readFileSync("raw_data/survey.csv", "utf8");
 
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-    const dateStr = date.toISOString().split('T')[0]; // yyyy-mm-dd
+  const hrvData = parse(hrvRaw, { columns: true, skip_empty_lines: true }).filter((r: any) => r.deviceId === "pm96" || r.userId === "pm96");
+  const sleepData = parse(sleepRaw, { columns: true, skip_empty_lines: true }).filter((r: any) => r.userId === "pm96");
+  const surveyData = parse(surveyRaw, { columns: true, skip_empty_lines: true }).find((r: any) => r.deviceId === "pm96" || r.userId === "pm96") as any;
 
-    console.log(`Processing ${dateStr}...`);
+  // 2. Update Profile with Survey Data
+  if (surveyData) {
+      console.log("Updating profile from survey...");
+      await db.collection("users").doc(TARGET_UID).set({
+          age: parseInt(surveyData.age),
+          sex: surveyData.sex === "1" ? "male" : "female",
+          baseline_metrics: {
+              isi: parseInt(surveyData.ISI_1),
+              phq9: parseInt(surveyData.PHQ9_1),
+              gad7: parseInt(surveyData.GAD7_1),
+              meq: parseInt(surveyData.MEQ)
+          },
+          updatedAt: Timestamp.now()
+      }, { merge: true });
+  }
 
-    // 1. Create Journal
-    const journalRef = db.doc(`users/${TARGET_UID}/journals/${dateStr}`);
-    await journalRef.set({
-      createdAt: Timestamp.fromDate(date),
-      hidden: false
-    });
-
-    // 2. Add 1-2 Entries
-    const entryCount = Math.floor(Math.random() * 2) + 1;
-    for (let j = 0; j < entryCount; j++) {
-      await journalRef.collection("entries").add({
-        content: `This is a mock entry for ${dateStr}. Random thought #${j + 1}.`,
-        createdAt: Timestamp.fromDate(new Date(date.getTime() + (j * 3600000))), 
-        updatedAt: Timestamp.fromDate(new Date(date.getTime() + (j * 3600000)))
+  // 3. Process Sleep and HRV by Date
+  const dates = [...new Set(sleepData.map((s: any) => s.date))].sort() as string[];
+  
+  for (const dateStr of dates) {
+      console.log(`Processing ${dateStr}...`);
+      const sleep = sleepData.find((s: any) => s.date === dateStr) as any;
+      
+      // Find HRV readings for this date
+      const dayStart = new Date(dateStr + "T00:00:00Z").getTime();
+      const dayEnd = dayStart + 86400000;
+      
+      const dayHrv = hrvData.filter((h: any) => {
+          const ts = parseInt(h.ts_start);
+          return ts >= dayStart && ts < dayEnd;
       });
-    }
 
-    // 3. Add Quiz Result with linked HRV data
-    const responses: Record<number, number> = {};
-    for (let q = 0; q < 10; q++) {
-        const trendBase = i > 15 ? 2 : 1; 
-        responses[q] = Math.max(0, Math.min(3, Math.floor(Math.random() * 2) + trendBase));
-    }
-
-    // Generate mock HRV data based on the stress level (lower RMSSD/SDNN = higher stress)
-    const stressFactor = Object.values(responses).reduce((a, b) => a + b, 0) / 30; // 0 to 1
-    
-    await db.collection(`users/${TARGET_UID}/quizzes`).add({
-      responses,
-      completedAt: Timestamp.fromDate(date),
-      processed: true,
-      processedAt: Timestamp.fromDate(date),
-      // Mocked HRV metrics based on the real dataset format
-      hrvData: {
-          heartRate: 70 + (stressFactor * 20) + (Math.random() * 5), // 70-95 BPM
-          rmssd: 100 - (stressFactor * 60) + (Math.random() * 10),    // 40-110 ms
-          sdnn: 90 - (stressFactor * 50) + (Math.random() * 10),      // 40-100 ms
-          pnn50: 0.8 - (stressFactor * 0.5),                          // 0.3-0.8
-          source: "seeded_from_dataset"
+      // Aggregate HRV for the day
+      let avgRmssd = 0;
+      let avgSdnn = 0;
+      let avgHr = 0;
+      if (dayHrv.length > 0) {
+          avgRmssd = dayHrv.reduce((acc: number, h: any) => acc + parseFloat(h.rmssd || 0), 0) / dayHrv.length;
+          avgSdnn = dayHrv.reduce((acc: number, h: any) => acc + parseFloat(h.sdnn || 0), 0) / dayHrv.length;
+          avgHr = dayHrv.reduce((acc: number, h: any) => acc + parseFloat(h.HR || 0), 0) / dayHrv.length;
       }
-    });
+
+      // Create Journal
+      const journalRef = db.doc(`users/${TARGET_UID}/journals/${dateStr}`);
+      await journalRef.set({
+          createdAt: Timestamp.fromDate(new Date(dateStr + "T08:00:00Z")),
+          hidden: false
+      });
+
+      // Add Sleep Entry
+      if (sleep) {
+          await journalRef.collection("entries").add({
+              content: `Sleep Diary: I went to bed at ${sleep.go2bed} and woke up at ${sleep.wakeup}. Total sleep duration was ${sleep.sleep_duration} hours. Sleep efficiency was ${Math.round(parseFloat(sleep.sleep_efficiency) * 100)}%.`,
+              type: "sleep_log",
+              createdAt: Timestamp.fromDate(new Date(dateStr + "T08:05:00Z")),
+              updatedAt: Timestamp.fromDate(new Date(dateStr + "T08:05:00Z"))
+          });
+      }
+
+      // Add Quiz/HRV Result
+      const quizRef = db.collection(`users/${TARGET_UID}/quizzes`).doc();
+      await quizRef.set({
+          completedAt: Timestamp.fromDate(new Date(dateStr + "T09:00:00Z")),
+          processed: true,
+          processedAt: Timestamp.now(),
+          responses: { "0": 1, "1": 1 }, // Placeholder responses
+          hrvData: {
+              rmssd: avgRmssd,
+              sdnn: avgSdnn,
+              heartRate: avgHr,
+              readingCount: dayHrv.length,
+              source: "dataset_pm96"
+          }
+      });
   }
 
   console.log("\nSeeding completed successfully!");
