@@ -26,18 +26,18 @@ export async function getHrvStats(): Promise<HrvDataPoint[]> {
         const snapshot = await db
             .collection("users")
             .doc(uid)
-            .collection("quizzes")
-            .orderBy("completedAt", "asc")
+            .collection("biometrics")
+            .orderBy("date", "asc")
             .get();
 
         const dailyData: Record<string, { rmssdSum: number; sdnnSum: number; count: number }> = {};
 
         snapshot.docs.forEach((doc) => {
             const data = doc.data();
-            if (!data.hrvData || !data.completedAt) return;
+            if (!data.date) return;
 
             // Ensure we handle the Firestore Timestamp
-            const date = data.completedAt.toDate();
+            const date = data.date.toDate();
             // Format to YYYY-MM-DD in user's timezone for stable aggregation
             const dateStr = date.toLocaleDateString("en-CA", { timeZone: timezone });
 
@@ -45,8 +45,8 @@ export async function getHrvStats(): Promise<HrvDataPoint[]> {
                 dailyData[dateStr] = { rmssdSum: 0, sdnnSum: 0, count: 0 };
             }
 
-            dailyData[dateStr].rmssdSum += data.hrvData.rmssd || 0;
-            dailyData[dateStr].sdnnSum += data.hrvData.sdnn || 0;
+            dailyData[dateStr].rmssdSum += data.rmssd || 0;
+            dailyData[dateStr].sdnnSum += data.sdnn || 0;
             dailyData[dateStr].count += 1;
         });
 

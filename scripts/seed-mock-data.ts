@@ -85,7 +85,9 @@ async function run() {
           });
       }
 
-      // Add Quiz/HRV Result
+      // TODO: When introducing new example users, update this seeding script to write
+      // hrvData into a separate 'biometrics' collection instead of the 'quizzes' collection.
+      // See scripts/migrate-user-biometrics.ts for the schema.
       const quizRef = db.collection(`users/${TARGET_UID}/quizzes`).doc();
       await quizRef.set({
           completedAt: Timestamp.fromDate(new Date(dateStr + "T09:00:00Z")),

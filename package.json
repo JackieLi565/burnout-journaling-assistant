@@ -5,14 +5,18 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "dev:remote": "powershell -Command \"if (Test-Path .env.local) { Rename-Item .env.local .env.local.bak }; try { npx dotenv-cli -e .env.remote -- next dev --turbopack } finally { if (Test-Path .env.local.bak) { Rename-Item .env.local.bak .env.local } }\"",
+    "generate:demo": "npx ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/generate-demo-journals.ts",
     "migrate:remote": "npx ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/migrate-to-remote.ts",
+    "migrate:biometrics": "npx ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/migrate-user-biometrics.ts",
     "reconcile:auth": "npx ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/reconcile-auth.ts",
+    "seed:demo": "npx ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/seed-demo-users.ts",
     "seed:remote": "npx ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/seed-mock-data.ts",
     "build": "next build --turbopack",
     "start": "next start",
     "emulators": "firebase emulators:start --only auth,firestore,storage --project dev-project-id --import=./.firebase/data --export-on-exit=./.firebase/data"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-icons": "^1.3.2",
     "@radix-ui/react-label": "^2.1.8",
