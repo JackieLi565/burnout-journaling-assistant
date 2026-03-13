@@ -78,8 +78,14 @@ async def analyze_journal(request: AnalysisRequest):
                     detail=f"Journal with ID {request.journal_id} not found"
                 )
             return result
+        elif request.texts:
+            return JournalController.analyze_journal_inputs(
+                user_id=request.user_id,
+                journal_date=request.journal_date,
+                texts=request.texts,
+            )
         elif request.text:
-            # Analyze provided text directly
+            # Analyze provided text directly (no cumulative)
             return JournalController.analyze_text(request.text)
         else:
             raise HTTPException(

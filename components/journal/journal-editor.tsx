@@ -10,6 +10,7 @@ import {
   saveJournalEntry,
   deleteJournalEntry,
   Entry,
+  analyzeAndSaveJournal,
 } from "@/app/actions/journal";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,7 +26,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useSidebar } from "@/components/ui/sidebar";
 import { useAnalysis } from "@/components/analysis-provider";
 import { useRouter } from "next/navigation";
 
@@ -258,21 +258,8 @@ export function JournalEditor({ date, initialEntries }: JournalEditorProps) {
                   onClick={async () => {
                     setIsAnalyzing(true);
                     try {
-                      const response = await fetch(
-                        "http://localhost:8000/api/v1/journals/analyze",
-                        {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                          },
-                          body: JSON.stringify({ text: content }),
-                        },
-                      );
-                      const data = await response.json();
-                      setAnalysisResult(data);
-                      router.push("/app/statistics");
+                      await analyzeAndSaveJournal(date, content);
                     } catch (error) {
-                      console.error("Analysis failed:", error);
                     } finally {
                       setIsAnalyzing(false);
                     }

@@ -167,3 +167,64 @@ export async function deleteJournalEntry(date: string, entryId: string) {
   revalidatePath(`/app/${date}`);
   return { success: true };
 }
+
+export interface BurnoutAnalysisResult {
+  overall_score: number;
+  cumulative_bri?: number | null;
+  risk_level?: string;
+  [key: string]: any;
+}
+
+export async function analyzeAndSaveJournal(
+  date: string,
+  text: string,
+): Promise<BurnoutAnalysisResult> {
+  const uid = await getAuthenticatedUserId();
+  const db = getAdminFirestore();
+
+  const texts = [(text ?? "").toString()];
+
+  const response = await fetch(
+    "http://localhost:8000/api/v1/journals/analyze",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: uid,
+        journal_date: date,
+        texts,
+      }),
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => "");
+    throw new Error(`Analysis failed (${response.status}): ${message}`);
+  }
+
+  const data = (await response.json()) as BurnoutAnalysisResult;
+
+  const bri = Number(data.overall_score);
+  const cumulativeBriRaw = data.cumulative_bri;
+  const cumulativeBri =
+    cumulativeBriRaw === undefined || cumulativeBriRaw === null
+      ? null
+      : Number(cumulativeBriRaw);
+
+  const journalRef = db.doc(`users/${uid}/journals/${date}`);
+  await journalRef.set(
+    {
+      bri: Number.isFinite(bri) ? bri : null,
+      cumulativeBri:
+        cumulativeBri === null || !Number.isFinite(cumulativeBri)
+          ? null
+          : cumulativeBri,
+      briUpdatedAt: Timestamp.now(),
+    },
+    { merge: true },
+  );
+
+  revalidatePath(`/app/${date}`);
+  return data;
+}
