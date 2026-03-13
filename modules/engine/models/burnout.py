@@ -22,6 +22,28 @@ class BurnoutFeature(BaseModel):
     cynical_thoughts: bool = Field(default=False, description="Presence of cynical thoughts")
     mbi_dimension: List[MBIDimension] = Field(default_factory=list, description="Associated MBI dimension")
     confidence: float = Field(ge=0.0, le=1.0, description="Confidence score for this feature")
+    ee_score: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=100.0,
+        description="Sentence-level emotional exhaustion score (0-100) from LangExtract",
+    )
+    dp_score: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=100.0,
+        description="Sentence-level depersonalization score (0-100) from LangExtract",
+    )
+    pa_score: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=100.0,
+        description="Sentence-level personal accomplishment score (0-100) from LangExtract",
+    )
+    is_poor_writer: bool = Field(
+        default=False,
+        description="Whether this sentence appears to come from a poor writer (for weighting)",
+    )
 
 class MBIScore(BaseModel):
     """MBI dimension score."""
@@ -33,6 +55,7 @@ class MBIScore(BaseModel):
 class BurnoutRiskIndex(BaseModel):
     """Burnout risk index result."""
     overall_score: float = Field(ge=0.0, le=100.0, description="Overall burnout risk score (0-100)")
+    cumulative_bri: Optional[float] = Field(default=None, ge=0.0, le=100.0, description="Cumulative burnout risk index (0-100)")
     emotional_exhaustion: MBIScore
     depersonalization: MBIScore
     personal_accomplishment: MBIScore
@@ -56,3 +79,6 @@ class AnalysisRequest(BaseModel):
     """Request model for burnout analysis."""
     journal_id: Optional[str] = Field(default=None, description="Journal entry ID to analyze")
     text: Optional[str] = Field(default=None, description="Optional text to analyze directly")
+    texts: Optional[List[str]] = Field(default=None, description="Optional list of journal input texts to analyze together")
+    user_id: Optional[str] = Field(default=None, description="Optional user ID (for cumulative BRI calculation)")
+    journal_date: Optional[str] = Field(default=None, description="Optional journal date (yyyy-mm-dd) for cumulative BRI calculation")

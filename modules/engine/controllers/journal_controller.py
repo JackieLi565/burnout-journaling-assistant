@@ -197,3 +197,55 @@ class JournalController:
         
         # Perform analysis
         return analysis_service.analyze(text)
+
+    @staticmethod
+    def analyze_journal_inputs(
+        *,
+        user_id: Optional[str],
+        journal_date: Optional[str],
+        texts: List[str],
+    ) -> BurnoutRiskIndex:
+        """
+        Analyze one or more journal input texts and compute cumulative BRI.
+
+        The frontend currently sends a single text (the active entry content),
+        but this accepts a list to keep the API flexible.
+        """
+        analysis_service = BurnoutAnalysisService(api_key=settings.GEMINI_API_KEY)
+        result = analysis_service.analyze_journal_inputs(texts)
+
+        if not user_id or not journal_date:
+            return result
+
+        # Look up previous journal in the user's collection to compute cumulative BRI.
+        journals_col = db.collection("users").document(user_id).collection("journals")
+
+        # Previous journal (by createdAt timestamp)
+        try:
+            target_date = datetime.strptime(journal_date, "%Y-%m-%d")
+            prev_query = (
+                journals_col.where("createdAt", "<", target_date)
+                .order_by("createdAt", direction=firestore.Query.DESCENDING)
+                .limit(1)
+                .stream()
+            )
+            prev_doc = next(prev_query, None)
+            prev_data = prev_doc.to_dict() if prev_doc else {}
+        except Exception:
+            prev_data = {}
+
+        prev_cumulative_bri = prev_data.get("cumulativeBri")
+
+        cumulative = BurnoutAnalysisService.compute_cumulative_bri(
+            previous_cumulative_bri=prev_cumulative_bri,
+            new_final_bri=result.overall_score,
+        )
+
+        # Put cumulative value onto response (and let callers persist it).
+        try:
+            result.cumulative_bri = cumulative
+        except Exception:
+            # Pydantic may be configured immutable; recreate if needed.
+            result = BurnoutRiskIndex(**result.model_dump(), cumulative_bri=cumulative)
+
+        return result

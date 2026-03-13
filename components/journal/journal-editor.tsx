@@ -10,6 +10,7 @@ import {
   saveEntry,
   deleteEntry,
   Entry,
+  analyzeAndSaveJournal,
 } from "@/app/actions/journal-actions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -262,17 +263,8 @@ export function JournalEditor({ date, initialEntries }: JournalEditorProps) {
                   onClick={async () => {
                     setIsAnalyzing(true);
                     try {
-                      const response = await fetch(
-                        "http://localhost:8000/api/v1/journals/analyze",
-                        {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                          },
-                          body: JSON.stringify({ text: content }),
-                        },
-                      );
-                      const data = await response.json();
+                      const data = await analyzeAndSaveJournal(date, content);
+                      console.log("analysis result (client)", data); 
                       setAnalysisResult(data);
                       router.push("/app/statistics");
                     } catch (error) {

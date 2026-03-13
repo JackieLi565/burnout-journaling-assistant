@@ -1,14 +1,13 @@
 """Burnout risk analysis service using LangExtract."""
-import re
-from typing import List, Dict, Optional
-from collections import Counter
+from __future__ import annotations
+
+from typing import List, Dict, Optional, Sequence
 
 try:
     import langextract as lx
     LANGEXTRACT_AVAILABLE = True
 except ImportError:
     LANGEXTRACT_AVAILABLE = False
-    # Fallback mode - will use pattern matching instead
 
 from models.burnout import (
     BurnoutRiskIndex,
@@ -18,12 +17,6 @@ from models.burnout import (
     EmotionType,
 )
 from services.preprocessing import preprocess_text
-from services.mbi_dictionary import (
-    MBI_TERMS,
-    STRESS_PATTERNS,
-    CYNICAL_PATTERNS,
-    get_terms_for_dimension,
-)
 
 
 class BurnoutAnalysisService:
@@ -35,241 +28,194 @@ class BurnoutAnalysisService:
         
         Args:
             api_key: Optional API key for LangExtract/Gemini. If not provided,
-                    will use pattern matching fallback.
+                    analysis will raise because LangExtract is required.
         """
         self.api_key = api_key
-        self.use_langextract = LANGEXTRACT_AVAILABLE and api_key is not None
-        
-        # Compile regex patterns for faster matching
-        self._compile_patterns()
-    
-    def _compile_patterns(self):
-        """Compile regex patterns for term matching."""
-        self.mbi_patterns: Dict[MBIDimension, List[re.Pattern]] = {}
-        for dimension, terms in MBI_TERMS.items():
-            patterns = []
-            for term in terms:
-                # Word boundary matching for better accuracy
-                pattern = re.compile(r'\b' + re.escape(term.lower()) + r'\b', re.IGNORECASE)
-                patterns.append(pattern)
-            self.mbi_patterns[dimension] = patterns
-        
-        # Stress patterns
-        self.stress_patterns = [
-            re.compile(r'\b' + re.escape(term.lower()) + r'\b', re.IGNORECASE)
-            for term in STRESS_PATTERNS
-        ]
-        
-        # Cynical patterns
-        self.cynical_patterns = [
-            re.compile(r'\b' + re.escape(term.lower()) + r'\b', re.IGNORECASE)
-            for term in CYNICAL_PATTERNS
-        ]
+        self.use_langextract = LANGEXTRACT_AVAILABLE and bool(api_key)
     
     def _extract_features_with_langextract(self, text: str, sentences: List[str]) -> List[BurnoutFeature]:
         """
-        Extract features using LangExtract.
-        
-        This uses LangExtract to classify emotions and extract burnout markers.
+        Extract features using LangExtract for each sentence, including
+        per-sentence MBI dimension scores and a poor-writer flag.
         """
-        features = []
-        
-        # Define schema for LangExtract
-        schema = {
-            "type": "object",
-            "properties": {
-                "emotion": {
-                    "type": "string",
-                    "enum": ["negative", "neutral", "positive"]
-                },
-                "stress_level": {
-                    "type": "number",
-                    "minimum": 0,
-                    "maximum": 1
-                },
-                "has_cynical_thoughts": {
-                    "type": "boolean"
-                },
-                "burnout_markers": {
-                    "type": "array",
-                    "items": {
-                        "type": "string",
-                        "enum": ["emotional_exhaustion", "depersonalization", "personal_accomplishment"]
-                    }
-                }
-            },
-            "required": ["emotion", "stress_level"]
-        }
-        
-        try:
-            # Process each sentence
-            for sentence in sentences:
-                if not sentence.strip():
-                    continue
-                
-                try:
-                    # Extract structured data from sentence using LangExtract
-                    result = lx.extract(
-                        text_or_documents=sentence,
-                        prompt_description=(
-                            "Extract burnout-related signals from journal text. "
-                            "Return emotion (negative/neutral/positive), "
-                            "stress_level as a float between 0 and 1, "
-                            "has_cynical_thoughts as boolean, "
-                            "and burnout_markers as a list (array of ONLY these values: "
-                            "emotional_exhaustion, depersonalization, personal_accomplishment)"
-                        ),
-                        examples=[
-                            lx.data.ExampleData(
-                                text="I'm so exhausted and overwhelmed with work. This is pointless.",
-                                extractions=[
-                                    lx.data.Extraction(
-                                        extraction_class="burnout_analysis",
-                                        extraction_text="exhausted",
-                                        attributes={"emotion": "negative", "stress_level": 0.9, "has_cynical_thoughts": True, "burnout_markers": ["emotional_exhaustion", "depersonalization"]}
-                                    )
-                                ]
-                            ),
-                            lx.data.ExampleData(
-                                text="Today was great! I accomplished a lot and feel proud of my work.",
-                                extractions=[
-                                    lx.data.Extraction(
-                                        extraction_class="burnout_analysis",
-                                        extraction_text="proud",
-                                        attributes={"emotion": "positive", "stress_level": 0.1, "has_cynical_thoughts": False, "burnout_markers": ["personal_accomplishment"]}
-                                    )
-                                ]
-                            )
-                        ],
-                        model_id="gemini-2.5-flash",
-                        api_key= self.api_key
-                    )
-                    # LangExtract returns AnnotatedDocument(extractions=[Extraction(...)], text=...)
-                    #AnnotatedDocument(extractions=[Extraction(extraction_class='burnout_analysis', extraction_text='exhausted', char_interval=CharInterval(start_pos=6, end_pos=15), alignment_status=<AlignmentStatus.MATCH_EXACT: 'match_exact'>, extraction_index=1, group_index=0, description=None, attributes={'emotion': 'negative', 'stress_level': '0.8', 'has_cynical_thoughts': 'false', 'burnout_markers': ['emotional_exhaustion']})], text='Im so exhausted and overwhelmed with work')
-                    # Handle single document or list of documents
-                    docs = result if isinstance(result, list) else [result]
-                    got_extractions_this_sentence = False
-                    for doc in docs:
-                        extractions = getattr(doc, "extractions", []) or []
-                        for extraction in extractions:
-                            attrs = getattr(extraction, "attributes", {}) or {}
-                            if not isinstance(attrs, dict):
-                                continue
-                            got_extractions_this_sentence = True
-                            # Attributes may be returned as strings (e.g. '0.8', 'false')
-                            emotion_str = (attrs.get("emotion") or "neutral").strip().lower()
-                            emotion_type = (
-                                EmotionType(emotion_str)
-                                if emotion_str in ("negative", "neutral", "positive")
-                                else EmotionType.NEUTRAL
-                            )
-                            raw_stress = attrs.get("stress_level", 0)
-                            try:
-                                stress_level = float(raw_stress)
-                            except (TypeError, ValueError):
-                                stress_level = 0.0
-                            stress_level = max(0.0, min(1.0, stress_level))
-                            raw_cynical = attrs.get("has_cynical_thoughts", False)
-                            cynical = (
-                                raw_cynical is True
-                                or (isinstance(raw_cynical, str) and raw_cynical.strip().lower() in ("true", "1", "yes"))
-                            )
-                            markers = attrs.get("burnout_markers") or []
-                            if isinstance(markers, str):
-                                markers = [m.strip() for m in markers.split(",") if m.strip()]
-                            mbi_dimensions = []
-                            if markers:
-                                if "emotional_exhaustion" in markers:
-                                    mbi_dimensions.append(MBIDimension.EMOTIONAL_EXHAUSTION)
-                                if "depersonalization" in markers:
-                                    mbi_dimensions.append(MBIDimension.DEPERSONALIZATION)
-                                if "personal_accomplishment" in markers:
-                                    mbi_dimensions.append(MBIDimension.PERSONAL_ACCOMPLISHMENT)
-                            feature = BurnoutFeature(
-                                emotion_type=emotion_type,
-                                stress_level=stress_level,
-                                cynical_thoughts=cynical,
-                                mbi_dimension=mbi_dimensions,
-                                confidence=0.8,
-                            )
-                            features.append(feature)
-                    # If no extractions for this sentence, fall back to pattern matching
-                    if not got_extractions_this_sentence and sentence.strip():
-                        fallback = self._extract_features_pattern_matching(sentence)
-                        if fallback:
-                            features.append(fallback)
-                
-                except Exception as e:
-                    # Fallback to pattern matching for this sentence
-                    print(f"LangExtract failed for sentence, using fallback: {e}")
-                    feature = self._extract_features_pattern_matching(sentence)
-                    if feature:
-                        features.append(feature)
-        
-        except Exception as e:
-            print(f"LangExtract extraction failed, falling back to pattern matching: {e}")
-            # Fallback to pattern matching
-            return self._extract_features_pattern_matching_batch(text, sentences)
-        
-        return features
-    
-    def _extract_features_pattern_matching(self, text: str) -> Optional[BurnoutFeature]:
-        """
-        Extract features using pattern matching (fallback method).
-        
-        This is used when LangExtract is not available or fails.
-        """
-        text_lower = text.lower()
-        
-        # Detect stress level
-        stress_matches = sum(1 for pattern in self.stress_patterns if pattern.search(text_lower))
-        stress_level = min(1.0, stress_matches / max(1, len(self.stress_patterns) / 10))
-        
-        # Detect cynical thoughts
-        cynical_thoughts = any(pattern.search(text_lower) for pattern in self.cynical_patterns)
-        
-        # Detect emotion (simple heuristic)
-        negative_words = ["not", "no", "never", "can't", "won't", "don't", "hate", "angry", "frustrated", "sad", "depressed"]
-        positive_words = ["good", "great", "excellent", "happy", "pleased", "satisfied", "proud", "accomplished"]
-        
-        negative_count = sum(1 for word in negative_words if word in text_lower)
-        positive_count = sum(1 for word in positive_words if word in text_lower)
-        
-        if negative_count > positive_count:
-            emotion_type = EmotionType.NEGATIVE
-        elif positive_count > negative_count:
-            emotion_type = EmotionType.POSITIVE
-        else:
-            emotion_type = EmotionType.NEUTRAL
-        
-        # Detect MBI dimension
-        mbi_dimensions = []
-        max_matches = 0
-        
-        for dimension, patterns in self.mbi_patterns.items():
-            matches = sum(1 for pattern in patterns if pattern.search(text_lower))
-            if matches > max_matches:
-                max_matches = matches
-                mbi_dimensions.append(dimension)
-        
-        if max_matches == 0:
-            mbi_dimensions = []
-        
-        return BurnoutFeature(
-            emotion_type=emotion_type,
-            stress_level=stress_level,
-            cynical_thoughts=cynical_thoughts,
-            mbi_dimension=mbi_dimensions,
-            confidence=0.6  # Lower confidence for pattern matching
-        )
-    
-    def _extract_features_pattern_matching_batch(self, text: str, sentences: List[str]) -> List[BurnoutFeature]:
-        """Extract features for all sentences using pattern matching."""
-        features = []
+        features: List[BurnoutFeature] = []
+
+        # We currently treat the entire journal text as a single unit for
+        # analysis. Any segmentation done in preprocessing is ignored here.
         for sentence in sentences:
-            feature = self._extract_features_pattern_matching(sentence)
-            if feature:
-                features.append(feature)
+            if not sentence.strip():
+                continue
+
+            try:
+                result = lx.extract(
+                    text_or_documents=sentence,
+                    prompt_description=(
+                        "Extract burnout-related signals from a single journal sentence. "
+                        "Return: emotion (negative/neutral/positive); "
+                        "stress_level as a float 0-1; "
+                        "has_cynical_thoughts as boolean; "
+                        "burnout_markers as an array of any of "
+                        "[emotional_exhaustion, depersonalization, personal_accomplishment]; "
+                        "ee_score, dp_score, pa_score as numbers from 0 to 100 "
+                        "representing emotional exhaustion, depersonalization, and low personal "
+                        "accomplishment respectively (higher means more burnout risk on that "
+                        "dimension for this sentence); and is_poor_writer as boolean when the "
+                        "writing looks fragmented, grammatically weak, or very sparse but still "
+                        "emotionally intense."
+                    ),
+                    examples=[
+                        lx.data.ExampleData(
+                            text="I'm so exhausted and overwhelmed with work. This is pointless.",
+                            extractions=[
+                                lx.data.Extraction(
+                                    extraction_class="burnout_analysis",
+                                    extraction_text="I'm so exhausted and overwhelmed with work. This is pointless.",
+                                    attributes={
+                                        "emotion": "negative",
+                                        "stress_level": 0.9,
+                                        "has_cynical_thoughts": True,
+                                        "burnout_markers": [
+                                            "emotional_exhaustion",
+                                            "depersonalization",
+                                        ],
+                                        "ee_score": 85,
+                                        "dp_score": 70,
+                                        "pa_score": 20,
+                                        "is_poor_writer": False,
+                                    },
+                                )
+                            ],
+                        ),
+                        lx.data.ExampleData(
+                            text="Today was great! I accomplished a lot and feel proud of my work.",
+                            extractions=[
+                                lx.data.Extraction(
+                                    extraction_class="burnout_analysis",
+                                    extraction_text="Today was great! I accomplished a lot and feel proud of my work.",
+                                    attributes={
+                                        "emotion": "positive",
+                                        "stress_level": 0.1,
+                                        "has_cynical_thoughts": False,
+                                        "burnout_markers": ["personal_accomplishment"],
+                                        "ee_score": 5,
+                                        "dp_score": 5,
+                                        "pa_score": 10,
+                                        "is_poor_writer": False,
+                                    },
+                                )
+                            ],
+                        ),
+                        lx.data.ExampleData(
+                            text="I feel like I never get anything meaningful done, no matter how hard I try.",
+                            extractions=[
+                                lx.data.Extraction(
+                                    extraction_class="burnout_analysis",
+                                    extraction_text="I feel like I never get anything meaningful done, no matter how hard I try.",
+                                    attributes={
+                                        "emotion": "negative",
+                                        "stress_level": 0.7,
+                                        "has_cynical_thoughts": False,
+                                        "burnout_markers": ["personal_accomplishment"],
+                                        # High PA risk score: strong sense of low personal accomplishment
+                                        "ee_score": 40,
+                                        "dp_score": 25,
+                                        "pa_score": 85,
+                                        "is_poor_writer": False,
+                                    },
+                                )
+                            ],
+                        ),
+                    ],
+                    model_id="gemini-2.5-flash",
+                    api_key=self.api_key,
+                )
+
+                docs = result if isinstance(result, list) else [result]
+                for doc in docs:
+                    extractions = getattr(doc, "extractions", []) or []
+                    for extraction in extractions:
+                        attrs = getattr(extraction, "attributes", {}) or {}
+                        if not isinstance(attrs, dict):
+                            continue
+
+                        emotion_str = (attrs.get("emotion") or "neutral").strip().lower()
+                        emotion_type = (
+                            EmotionType(emotion_str)
+                            if emotion_str in ("negative", "neutral", "positive")
+                            else EmotionType.NEUTRAL
+                        )
+
+                        raw_stress = attrs.get("stress_level", 0)
+                        try:
+                            stress_level = float(raw_stress)
+                        except (TypeError, ValueError):
+                            stress_level = 0.0
+                        stress_level = max(0.0, min(1.0, stress_level))
+
+                        raw_cynical = attrs.get("has_cynical_thoughts", False)
+                        cynical = (
+                            raw_cynical is True
+                            or (isinstance(raw_cynical, str) and raw_cynical.strip().lower() in ("true", "1", "yes"))
+                        )
+
+                        markers = attrs.get("burnout_markers") or []
+                        if isinstance(markers, str):
+                            markers = [m.strip() for m in markers.split(",") if m.strip()]
+
+                        mbi_dimensions = []
+                        if markers:
+                            if "emotional_exhaustion" in markers:
+                                mbi_dimensions.append(MBIDimension.EMOTIONAL_EXHAUSTION)
+                            if "depersonalization" in markers:
+                                mbi_dimensions.append(MBIDimension.DEPERSONALIZATION)
+                            if "personal_accomplishment" in markers:
+                                mbi_dimensions.append(MBIDimension.PERSONAL_ACCOMPLISHMENT)
+
+                        # New: per-sentence MBI scores and poor-writer flag
+                        def _score_from_attr(key: str, default: float) -> float:
+                            raw_val = attrs.get(key, default)
+                            try:
+                                val = float(raw_val)
+                            except (TypeError, ValueError):
+                                val = default
+                            return max(0.0, min(100.0, val))
+
+                        ee_score = _score_from_attr("ee_score", 0.0)
+                        dp_score = _score_from_attr("dp_score", 0.0)
+                        pa_score = _score_from_attr("pa_score", 0.0)
+
+                        # Fallback heuristics if scores are all zero: derive from markers/emotion
+                        if ee_score == 0.0 and "emotional_exhaustion" in markers:
+                            ee_score = max(ee_score, stress_level * 100.0)
+                        if dp_score == 0.0 and "depersonalization" in markers:
+                            dp_score = max(dp_score, stress_level * 100.0 * 0.8)
+                        if pa_score == 0.0 and "personal_accomplishment" in markers:
+                            # Higher PA terms = lower burnout; invert into risk-ish score
+                            pa_score = max(pa_score, 100.0 - stress_level * 100.0)
+
+                        raw_poor = attrs.get("is_poor_writer", False)
+                        is_poor_writer = (
+                            raw_poor is True
+                            or (isinstance(raw_poor, str) and raw_poor.strip().lower() in ("true", "1", "yes"))
+                        )
+
+                        feature = BurnoutFeature(
+                            emotion_type=emotion_type,
+                            stress_level=stress_level,
+                            cynical_thoughts=cynical,
+                            mbi_dimension=mbi_dimensions,
+                            confidence=0.8,
+                            ee_score=ee_score,
+                            dp_score=dp_score,
+                            pa_score=pa_score,
+                            is_poor_writer=is_poor_writer,
+                        )
+                        features.append(feature)
+
+            except Exception as e:
+                # LangExtract is required per product spec; fail fast so callers can surface it.
+                raise RuntimeError(f"LangExtract failed for sentence: {e}") from e
+
         return features
     
     def _calculate_mbi_scores(self, features: List[BurnoutFeature], text: str, text_length: int) -> Dict[MBIDimension, MBIScore]:
@@ -278,93 +224,77 @@ class BurnoutAnalysisService:
         
         Args:
             features: List of extracted features
-            text: Original cleaned text for direct term matching
+            text: Original cleaned text (unused; kept for signature stability)
             text_length: Length of processed text for normalization
         
         Returns:
             Dictionary mapping MBI dimensions to scores
         """
-        # Count frequencies for each dimension from features
-        dimension_counts: Dict[MBIDimension, int] = {
+        # Aggregate LangExtract-provided per-sentence dimension scores
+        sum_scores: Dict[MBIDimension, float] = {
+            MBIDimension.EMOTIONAL_EXHAUSTION: 0.0,
+            MBIDimension.DEPERSONALIZATION: 0.0,
+            MBIDimension.PERSONAL_ACCOMPLISHMENT: 0.0,
+        }
+        counts: Dict[MBIDimension, int] = {
             MBIDimension.EMOTIONAL_EXHAUSTION: 0,
             MBIDimension.DEPERSONALIZATION: 0,
             MBIDimension.PERSONAL_ACCOMPLISHMENT: 0,
         }
-        
-        # Count occurrences from features
+
         for feature in features:
-            if feature.mbi_dimension:
-                for dimension in feature.mbi_dimension:
-                    dimension_counts[dimension] += 1
-        
-        # Also count direct term matches in text (for better coverage)
-        text_lower = text.lower()
-        for dimension, patterns in self.mbi_patterns.items():
-            matches = sum(1 for pattern in patterns if pattern.search(text_lower))
-            # Add direct matches to the count
-            dimension_counts[dimension] += matches
-        
-        # Calculate raw scores (frequency-based)
-        raw_scores = {}
-        for dimension in MBIDimension:
-            frequency = dimension_counts[dimension]
-            raw_scores[dimension] = frequency
-        
-        # Normalize scores (0-100 scale)
-        # Use length normalization to account for verbose users
-        normalized_scores = {}
-        base_length = 500  # Baseline length for normalization
-        
-        for dimension in MBIDimension:
-            raw_score = raw_scores[dimension]
-            
-            # Length normalization: adjust frequency based on text length
-            if text_length > 0:
-                length_factor = base_length / max(text_length, base_length)
-                normalized_frequency = raw_score * length_factor
+            if feature.ee_score > 0.0:
+                sum_scores[MBIDimension.EMOTIONAL_EXHAUSTION] += feature.ee_score
+                counts[MBIDimension.EMOTIONAL_EXHAUSTION] += 1
+            if feature.dp_score > 0.0:
+                sum_scores[MBIDimension.DEPERSONALIZATION] += feature.dp_score
+                counts[MBIDimension.DEPERSONALIZATION] += 1
+            if feature.pa_score > 0.0:
+                sum_scores[MBIDimension.PERSONAL_ACCOMPLISHMENT] += feature.pa_score
+                counts[MBIDimension.PERSONAL_ACCOMPLISHMENT] += 1
+
+        mbi_scores: Dict[MBIDimension, MBIScore] = {}
+        for dim in MBIDimension:
+            count = counts[dim]
+            if count > 0:
+                avg_score = sum_scores[dim] / count
             else:
-                normalized_frequency = raw_score
-            
-            # Convert to 0-100 scale
-            # For EE and DP: higher frequency = higher score (higher burnout risk)
-            # For PA: higher frequency = lower score (lower burnout risk, as it's inverted)
-            if dimension == MBIDimension.PERSONAL_ACCOMPLISHMENT:
-                # Inverted: more PA terms = lower burnout risk
-                # Scale: 0 occurrences = 100 (high burnout), many occurrences = 0 (low burnout)
-                max_expected = 20  # Expected max occurrences in a typical entry
-                normalized_score = max(0, 100 - (normalized_frequency / max_expected * 100))
-            else:
-                # EE and DP: more occurrences = higher burnout risk
-                max_expected = 15  # Expected max occurrences
-                normalized_score = min(100, (normalized_frequency / max_expected * 100))
-            
-            normalized_scores[dimension] = normalized_score
-        
-        # Create MBIScore objects
-        mbi_scores = {}
-        for dimension in MBIDimension:
-            mbi_scores[dimension] = MBIScore(
-                dimension=dimension,
-                raw_score=raw_scores[dimension],
-                normalized_score=normalized_scores[dimension],
-                frequency=int(raw_scores[dimension])
+                avg_score = 0.0
+
+            mbi_scores[dim] = MBIScore(
+                dimension=dim,
+                raw_score=avg_score,
+                normalized_score=avg_score,
+                frequency=count,
             )
-        
+
         return mbi_scores
     
-    def _calculate_overall_score(self, mbi_scores: Dict[MBIDimension, MBIScore]) -> float:
+    def _calculate_overall_score(self, mbi_scores: Dict[MBIDimension, MBIScore], text_length: int) -> float:
         """
-        Calculate overall burnout risk score from MBI dimension scores.
-        
-        Formula: Weighted average of EE, DP, and inverted PA
+        Calculate overall burnout risk score (BRI) from LangExtract scores.
+
+        - Uses the per-sentence `bri_score` values returned by LangExtract.
+        - Weights sentences from poor writers (`is_poor_writer=True`) higher.
+        - Applies a light length-based normalization so very short texts have
+          slightly down-weighted scores.
         """
+        if not mbi_scores:
+            return 0.0
+        # Use dimension-level scores from LangExtract and apply explicit weights
         ee_score = mbi_scores[MBIDimension.EMOTIONAL_EXHAUSTION].normalized_score
         dp_score = mbi_scores[MBIDimension.DEPERSONALIZATION].normalized_score
         pa_score = mbi_scores[MBIDimension.PERSONAL_ACCOMPLISHMENT].normalized_score
-        # Weights: EE (40%), DP (30%), PA (30%)
-        overall = (ee_score * 0.4) + (dp_score * 0.3) + (pa_score * 0.3)
-        
-        return min(100.0, max(0.0, overall))
+
+        # Weights can be tuned; keep EE a bit higher-weighted.
+        overall_base = (ee_score * 0.45) + (dp_score * 0.35) + (pa_score * 0.20)
+
+        # Normalize by text length so extremely short texts don't over-dominate.
+        # base_length = 300
+        # length_factor = min(1.0, text_length / base_length) if text_length > 0 else 0.0
+        # overall = overall_base * length_factor
+
+        return float(max(0.0, min(100.0, overall_base)))
     
     def analyze(self, text: str) -> BurnoutRiskIndex:
         """
@@ -376,19 +306,21 @@ class BurnoutAnalysisService:
         Returns:
             BurnoutRiskIndex with scores and analysis
         """
+        if not self.use_langextract:
+            raise RuntimeError("LangExtract is required (missing dependency or API key).")
+
         # Step 1: Preprocessing
         cleaned_text, sentences = preprocess_text(text)
         text_length = len(cleaned_text)
         
         # Step 2: Feature extraction
-        if self.use_langextract:
-            features = self._extract_features_with_langextract(cleaned_text, sentences)
-        else:
-            features = self._extract_features_pattern_matching_batch(cleaned_text, sentences)
-        # Step 3: Calculate MBI scores
+        # Do not split into multiple sentences for scoring; analyze the full text
+        # as a single unit so the BRI reflects the whole journal input.
+        features = self._extract_features_with_langextract(cleaned_text, [cleaned_text])
+        # Step 3: Calculate MBI scores using LangExtract-provided dimension scores
         mbi_scores = self._calculate_mbi_scores(features, cleaned_text, text_length)
-        # Step 4: Calculate overall score
-        overall_score = self._calculate_overall_score(mbi_scores)
+        # Step 4: Calculate overall BRI from MBI dimension scores
+        overall_score = self._calculate_overall_score(mbi_scores, text_length)
         # Step 5: Determine risk level
         if overall_score < 25:
             risk_level = "low"
@@ -412,6 +344,41 @@ class BurnoutAnalysisService:
         )
         
         return result
+
+    def analyze_journal_inputs(self, journal_inputs: Sequence[str]) -> BurnoutRiskIndex:
+        """
+        Analyze multiple journal inputs as a single journal for a final BRI.
+
+        This is used when a journal date has multiple entry inputs; we combine
+        all inputs so the final BRI reflects the entire journal, not one entry.
+        """
+        combined = "\n\n---\n\n".join([t for t in journal_inputs if (t or "").strip()])
+        return self.analyze(combined)
+
+    @staticmethod
+    def compute_cumulative_bri(
+        *,
+        previous_cumulative_bri: Optional[float],
+        new_final_bri: float,
+    ) -> float:
+        """
+        Compute a new cumulative BRI.
+
+        Uses only the previous cumulative BRI (if any) and the current
+        journal's final BRI; it does not re-analyze or weight historical
+        journals.
+        """
+        if previous_cumulative_bri is None:
+            # First journal: cumulative == current final score
+            base = 0
+        else:
+            base = previous_cumulative_bri
+
+        # Exponential moving average toward the new final BRI.
+        alpha = 0.35
+        ema = (base * (1.0 - alpha)) + (new_final_bri * alpha)
+
+        return float(max(0.0, min(100.0, ema)))
 
 #Test run of langextract python -m services.burnout_analysis for testing langextract
 if __name__ == "__main__":
