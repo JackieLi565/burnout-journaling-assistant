@@ -47,10 +47,11 @@ import { Separator } from "@/components/ui/separator";
 
 interface JournalSidebarProps {
   today: string;
+  displayName?: string;
 }
 
 // Main Sidebar Component
-export function JournalSidebar({ today }: JournalSidebarProps) {
+export function JournalSidebar({ today, displayName }: JournalSidebarProps) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -110,6 +111,12 @@ export function JournalSidebar({ today }: JournalSidebarProps) {
       </SidebarContent>
 
       <SidebarFooter>
+        {displayName && (
+          <div className="px-3 py-2 group-data-[collapsible=icon]:hidden">
+            <p className="text-xs text-muted-foreground truncate">Signed in as</p>
+            <p className="text-sm font-medium truncate">{displayName}</p>
+          </div>
+        )}
         <SidebarMenu>
           <SidebarMenuItem>
             <Popover>
