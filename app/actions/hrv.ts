@@ -45,11 +45,13 @@ export async function getHrvStats(): Promise<HrvDataPoint[]> {
             dailyData[dateStr].count += 1;
         });
 
-        const result: HrvDataPoint[] = Object.entries(dailyData).map(([date, values]) => ({
-            date,
-            rmssd: Math.round(values.rmssdSum / values.count),
-            sdnn: Math.round(values.sdnnSum / values.count),
-        }));
+        const result: HrvDataPoint[] = Object.entries(dailyData)
+            .filter(([, values]) => values.count > 0)
+            .map(([date, values]) => ({
+                date,
+                rmssd: Math.round(values.rmssdSum / values.count),
+                sdnn: Math.round(values.sdnnSum / values.count),
+            }));
 
         return result.sort((a, b) => a.date.localeCompare(b.date));
     } catch (error) {
