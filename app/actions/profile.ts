@@ -70,20 +70,41 @@ export async function updateUserProfile(data: ProfileData) {
   }
 }
 
+async function deleteSubcollection(
+  db: Firestore,
+  uid: string,
+  name: string
+) {
+  const snapshot = await db
+    .collection("users")
+    .doc(uid)
+    .collection(name)
+    .get();
+  await Promise.all(snapshot.docs.map((doc) => doc.ref.delete()));
+}
+
 export async function deleteUserAccount() {
   const uid = await getAuthenticatedUserId();
   const db = getAdminFirestore();
   const auth = getAdminAuth();
 
   try {
-    // 1. Delete user data from Firestore (and subcollections if needed, but for now just the user doc)
-    // Ideally, a cloud function handles recursive delete, but we'll delete the main doc here.
+    // 1. Delete all subcollections before removing the parent document.
+    //    Firestore does not cascade-delete subcollections automatically,
+    //    so omitting this step leaves orphaned data permanently.
+    await Promise.all([
+      deleteSubcollection(db, uid, "journals"),
+      deleteSubcollection(db, uid, "quizzes"),
+      deleteSubcollection(db, uid, "biometrics"),
+    ]);
+
+    // 2. Delete the top-level user document
     await db.collection("users").doc(uid).delete();
 
-    // 2. Delete user from Auth
+    // 3. Delete user from Auth
     await auth.deleteUser(uid);
 
-    // 3. Clear session cookie
+    // 4. Clear session cookie
     const cookieStore = await cookies();
     cookieStore.delete("__session");
   } catch (error) {
