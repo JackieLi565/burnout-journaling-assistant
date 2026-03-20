@@ -16,13 +16,27 @@ interface PageProps {
 export default async function JournalDatePage({ params }: PageProps) {
   const { date } = await params;
 
-  // 1. Basic format validation (YYYY-MM-DD)
+  // 1. Format validation (YYYY-MM-DD) + semantic validity check
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return (
       <div className="flex items-center justify-center h-full">
         <p className="text-muted-foreground">
           Invalid date format. Expected YYYY-MM-DD.
         </p>
+      </div>
+    );
+  }
+
+  const [y, m, d] = date.split("-").map(Number);
+  const parsed = new Date(y, m - 1, d);
+  if (
+    parsed.getFullYear() !== y ||
+    parsed.getMonth() !== m - 1 ||
+    parsed.getDate() !== d
+  ) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-muted-foreground">Invalid date.</p>
       </div>
     );
   }
