@@ -28,13 +28,16 @@ export async function getQuizStats(): Promise<QuizStat[]> {
 
       // Calculate a simple "Stress Score" from the raw answers
       // (This logic should match your Python engine eventually)
-      const totalPossible = Object.keys(data.responses).length * 3; // Max score per question is 3
-      const currentScore = Object.values(
-        data.responses as Record<string, number>,
-      ).reduce((a, b) => a + b, 0);
+      const responses = data.responses as Record<string, number>;
+      const responseValues = Object.values(responses);
+      const totalPossible = responseValues.length * 3; // Max score per question is 3
+      const currentScore = responseValues.reduce((a, b) => a + b, 0);
 
-      // Normalize to 0-100 scale
-      const normalizedScore = Math.round((currentScore / totalPossible) * 100);
+      // Normalize to 0-100 scale; guard against empty responses (no division by zero)
+      const normalizedScore =
+        totalPossible > 0
+          ? Math.min(100, Math.round((currentScore / totalPossible) * 100))
+          : 0;
 
       return {
         id: doc.id,
