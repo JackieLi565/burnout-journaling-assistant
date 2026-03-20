@@ -10,7 +10,11 @@ export type HrvDataPoint = {
     sdnn: number;
 };
 
-export async function getHrvStats(): Promise<HrvDataPoint[]> {
+export type HrvStatsResult =
+    | { data: HrvDataPoint[]; error?: never }
+    | { data: []; error: string };
+
+export async function getHrvStats(): Promise<HrvStatsResult> {
     const uid = await getAuthenticatedUserId();
 
     try {
@@ -53,9 +57,9 @@ export async function getHrvStats(): Promise<HrvDataPoint[]> {
                 sdnn: Math.round(values.sdnnSum / values.count),
             }));
 
-        return result.sort((a, b) => a.date.localeCompare(b.date));
+        return { data: result.sort((a, b) => a.date.localeCompare(b.date)) };
     } catch (error) {
         console.error("Error fetching HRV stats:", error);
-        return [];
+        return { data: [], error: "Failed to load HRV data. Please try again." };
     }
 }

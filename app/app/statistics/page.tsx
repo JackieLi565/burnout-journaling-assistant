@@ -5,8 +5,17 @@ import HrvChart from "@/components/statistics/HrvChart";
 import { Skeleton } from "@/components/ui/skeleton";
 
 async function HrvStatsSection() {
-  const data = await getHrvStats();
-  return <HrvChart data={data} />;
+  const { data, error } = await getHrvStats();
+  return (
+    <>
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 mb-4">
+          {error}
+        </div>
+      )}
+      <HrvChart data={data} />
+    </>
+  );
 }
 
 async function JournalBriSection() {

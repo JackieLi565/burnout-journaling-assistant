@@ -3,7 +3,7 @@ import { getQuizStats } from "@/app/actions/stats";
 import StatsChart from "./stats-chart"; // We will create this next
 
 export default async function StatsPage() {
-    const data = await getQuizStats();
+    const { data, error } = await getQuizStats();
 
     const avgScore =
         data.length > 0
@@ -16,6 +16,12 @@ export default async function StatsPage() {
         <div className="min-h-screen bg-gray-50 p-8">
             <div className="max-w-5xl mx-auto space-y-8">
                 <h1 className="text-3xl font-bold">Your Wellness Insights</h1>
+
+                {error && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        {error}
+                    </div>
+                )}
 
                 {/* Overall Metrics */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

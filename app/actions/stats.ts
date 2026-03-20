@@ -59,7 +59,11 @@ export type QuizStat = {
   sections: MbiSections;
 };
 
-export async function getQuizStats(): Promise<QuizStat[]> {
+export type QuizStatsResult =
+  | { data: QuizStat[]; error?: never }
+  | { data: []; error: string };
+
+export async function getQuizStats(): Promise<QuizStatsResult> {
   const uid = await getAuthenticatedUserId();
 
   try {
@@ -107,9 +111,9 @@ export async function getQuizStats(): Promise<QuizStat[]> {
       };
     });
 
-    return stats;
+    return { data: stats };
   } catch (error) {
     console.error("Failed to fetch stats:", error);
-    return [];
+    return { data: [], error: "Failed to load check-in data. Please try again." };
   }
 }
