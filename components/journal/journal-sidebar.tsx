@@ -17,7 +17,7 @@ import {
   ClipboardCheck,
 } from "lucide-react";
 import { useJournals, Journal } from "@/hooks/use-journals";
-import QuizModal from "@/components/misc/QuizModal";
+import QuizModal from "@/components/misc/quiz-modal";
 
 import {
   Popover,
