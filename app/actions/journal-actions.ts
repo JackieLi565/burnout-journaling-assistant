@@ -1,11 +1,9 @@
 "use server";
 
-import { initAdmin } from "@/lib/firebase-admin";
-import { getFirestore, Timestamp } from "firebase-admin/firestore";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { verifySession } from "@/lib/auth-rsc";
+import { getAdminFirestore } from "@/lib/firebase-admin";
+import { Timestamp } from "firebase-admin/firestore";
 import { revalidatePath } from "next/cache";
+import { getAuthenticatedUserId } from "@/app/actions/auth";
 
 // Types
 export interface Entry {
@@ -22,34 +20,12 @@ export interface JournalData {
   entries: Entry[];
 }
 
-// Helpers
-async function getAuthenticatedUser() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("__session")?.value;
-
-  if (!sessionCookie) {
-    redirect("/signin");
-  }
-
-  try {
-    const decodedToken = await verifySession(sessionCookie);
-    return decodedToken.uid;
-  } catch (error) {
-    redirect("/signin");
-  }
-}
-
-function getDb() {
-  const app = initAdmin();
-  return getFirestore(app);
-}
-
 // Actions
 
 export async function getJournal(date: string): Promise<JournalData | null> {
-  const uid = await getAuthenticatedUser();
-  const db = getDb();
-  
+  const uid = await getAuthenticatedUserId();
+  const db = getAdminFirestore();
+
   const journalRef = db.doc(`users/${uid}/journals/${date}`);
   const journalSnap = await journalRef.get();
 
@@ -78,18 +54,22 @@ export async function getJournal(date: string): Promise<JournalData | null> {
 }
 
 export async function createJournalWithEntry(date: string) {
-  const uid = await getAuthenticatedUser();
-  const db = getDb();
+  const uid = await getAuthenticatedUserId();
+  const db = getAdminFirestore();
   const batch = db.batch();
 
   const journalRef = db.doc(`users/${uid}/journals/${date}`);
   const entryRef = journalRef.collection("entries").doc();
 
   // Create Journal
-  batch.set(journalRef, {
-    createdAt: Timestamp.now(),
-    hidden: false,
-  }, { merge: true });
+  batch.set(
+    journalRef,
+    {
+      createdAt: Timestamp.now(),
+      hidden: false,
+    },
+    { merge: true },
+  );
 
   // Create First Entry
   const now = Timestamp.now();
@@ -101,18 +81,18 @@ export async function createJournalWithEntry(date: string) {
 
   await batch.commit();
   revalidatePath(`/app/${date}`);
-  
-  return { 
+
+  return {
     journalId: date,
     entryId: entryRef.id,
-    success: true 
+    success: true,
   };
 }
 
 export async function createEntry(date: string) {
-  const uid = await getAuthenticatedUser();
-  const db = getDb();
-  
+  const uid = await getAuthenticatedUserId();
+  const db = getAdminFirestore();
+
   const journalRef = db.doc(`users/${uid}/journals/${date}`);
   const entryRef = journalRef.collection("entries").doc();
   const now = Timestamp.now();
@@ -124,7 +104,7 @@ export async function createEntry(date: string) {
   });
 
   revalidatePath(`/app/${date}`);
-  
+
   return {
     id: entryRef.id,
     content: "",
@@ -133,10 +113,14 @@ export async function createEntry(date: string) {
   };
 }
 
-export async function saveEntry(date: string, entryId: string, content: string) {
-  const uid = await getAuthenticatedUser();
-  const db = getDb();
-  
+export async function saveEntry(
+  date: string,
+  entryId: string,
+  content: string,
+) {
+  const uid = await getAuthenticatedUserId();
+  const db = getAdminFirestore();
+
   const entryRef = db.doc(`users/${uid}/journals/${date}/entries/${entryId}`);
 
   await entryRef.update({
@@ -149,9 +133,9 @@ export async function saveEntry(date: string, entryId: string, content: string) 
 }
 
 export async function deleteEntry(date: string, entryId: string) {
-  const uid = await getAuthenticatedUser();
-  const db = getDb();
-  
+  const uid = await getAuthenticatedUserId();
+  const db = getAdminFirestore();
+
   const entryRef = db.doc(`users/${uid}/journals/${date}/entries/${entryId}`);
   await entryRef.delete();
 

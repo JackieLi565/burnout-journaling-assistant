@@ -5,6 +5,7 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 export async function loginAction(idToken: string, redirectUrl?: string) {
   const app = initAdmin();
@@ -57,4 +58,34 @@ export async function logoutAction() {
   const cookieStore = await cookies();
   cookieStore.delete("__session");
   redirect("/signin");
+}
+
+export const verifySessionAction = cache(async (idToken: string) => {
+  const app = initAdmin();
+  const auth = getAuth(app);
+
+  try {
+    const decodedToken = await auth.verifyIdToken(idToken);
+    return decodedToken;
+  } catch (error) {
+    console.error("Error verifying ID token:", error);
+    return undefined;
+  }
+});
+
+/**
+ * Helper function to get the authenticated user's UID. If not authenticated, redirects to signin.
+ */
+export async function getAuthenticatedUserId() {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get("__session")?.value;
+
+  if (!sessionCookie) {
+    redirect("/signin");
+  }
+
+  const decodedToken = await verifySessionAction(sessionCookie);
+  if (!decodedToken) redirect("/signin");
+
+  return decodedToken.uid;
 }

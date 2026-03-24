@@ -1,11 +1,9 @@
 "use server";
 
-import { initAdmin } from "@/lib/firebase-admin";
-import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
+import { getAdminFirestore, getAdminAuth } from "@/lib/firebase-admin";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { verifySession } from "@/lib/auth-rsc";
+import { getAuthenticatedUserId } from "@/app/actions/auth";
 import { z } from "zod";
 
 // --- Schema ---
@@ -19,40 +17,11 @@ const profileSchema = z.object({
 
 export type ProfileData = z.infer<typeof profileSchema>;
 
-// --- Helpers ---
-
-async function getAuthenticatedUser() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("__session")?.value;
-
-  if (!sessionCookie) {
-    redirect("/signin");
-  }
-
-  try {
-    const decodedToken = await verifySession(sessionCookie);
-    return decodedToken.uid;
-  } catch (error) {
-    redirect("/signin");
-  }
-}
-
-function getDb() {
-  const app = initAdmin();
-  return getFirestore(app);
-}
-
-function getAuthAdmin() {
-    const app = initAdmin();
-    return getAuth(app);
-}
-
-
 // --- Actions ---
 
 export async function getUserProfile(): Promise<ProfileData> {
-  const uid = await getAuthenticatedUser();
-  const db = getDb();
+  const uid = await getAuthenticatedUserId();
+  const db = getAdminFirestore();
 
   const userDoc = await db.collection("users").doc(uid).get();
 
@@ -77,8 +46,8 @@ export async function getUserProfile(): Promise<ProfileData> {
 }
 
 export async function updateUserProfile(data: ProfileData) {
-  const uid = await getAuthenticatedUser();
-  const db = getDb();
+  const uid = await getAuthenticatedUserId();
+  const db = getAdminFirestore();
 
   // Validate data
   const parsedData = profileSchema.safeParse(data);
@@ -102,9 +71,9 @@ export async function updateUserProfile(data: ProfileData) {
 }
 
 export async function deleteUserAccount() {
-  const uid = await getAuthenticatedUser();
-  const db = getDb();
-  const auth = getAuthAdmin();
+  const uid = await getAuthenticatedUserId();
+  const db = getAdminFirestore();
+  const auth = getAdminAuth();
 
   try {
     // 1. Delete user data from Firestore (and subcollections if needed, but for now just the user doc)

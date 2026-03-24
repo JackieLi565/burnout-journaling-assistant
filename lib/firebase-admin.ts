@@ -2,27 +2,38 @@ import "server-only";
 import { initializeApp, getApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore"; // <--- 1. ADD THIS
 import {
-    adminConfig,
-    emulatorConfig,
-    firebaseConfig,
+  adminConfig,
+  emulatorConfig,
+  firebaseConfig,
 } from "@/configs/firebase";
+import { getAuth } from "firebase-admin/auth";
 
 export function initAdmin() {
-    if (getApps().length > 0) return getApp();
+  if (getApps().length > 0) return getApp();
 
-    if (emulatorConfig.useEmulator) {
-        const { host, authPort, firestorePort, storagePort } = emulatorConfig;
+  if (emulatorConfig.useEmulator) {
+    const { host, authPort, firestorePort, storagePort } = emulatorConfig;
 
-        process.env.FIREBASE_AUTH_EMULATOR_HOST = `${host}:${authPort}`;
-        process.env.FIRESTORE_EMULATOR_HOST = `${host}:${firestorePort}`;
-        process.env.FIREBASE_STORAGE_EMULATOR_HOST = `${host}:${storagePort}`;
-    }
+    process.env.FIREBASE_AUTH_EMULATOR_HOST = `${host}:${authPort}`;
+    process.env.FIRESTORE_EMULATOR_HOST = `${host}:${firestorePort}`;
+    process.env.FIREBASE_STORAGE_EMULATOR_HOST = `${host}:${storagePort}`;
+  }
 
-    return initializeApp({
-        credential: cert(adminConfig.serviceAccountPath),
-        projectId: firebaseConfig.projectId,
-        storageBucket: firebaseConfig.storageBucket,
-    });
+  return initializeApp({
+    credential: cert(adminConfig.serviceAccountPath),
+    projectId: firebaseConfig.projectId,
+    storageBucket: firebaseConfig.storageBucket,
+  });
+}
+
+export function getAdminFirestore() {
+  const app = initAdmin();
+  return getFirestore(app);
+}
+
+export function getAdminAuth() {
+  const app = initAdmin();
+  return getAuth(app);
 }
 
 // 2. ADD THIS AT THE BOTTOM
