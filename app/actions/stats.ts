@@ -1,8 +1,7 @@
 // app/actions/stats.ts
 "use server";
 
-import { verifySession } from "@/lib/auth-rsc";
-import { cookies } from "next/headers";
+import { getAuthenticatedUserId } from "@/app/actions/auth";
 import { db } from "@/lib/firebase-admin";
 
 export type QuizStat = {
@@ -12,14 +11,9 @@ export type QuizStat = {
 };
 
 export async function getQuizStats(): Promise<QuizStat[]> {
+    const uid = await getAuthenticatedUserId();
+
     try {
-        const cookieStore = await cookies();
-        const sessionCookie = cookieStore.get("__session")?.value;
-        if (!sessionCookie) return [];
-
-        const decodedToken = await verifySession(sessionCookie);
-        const uid = decodedToken.uid;
-
         const snapshot = await db
             .collection("users")
             .doc(uid)
