@@ -2,14 +2,16 @@
 
 import { getAdminFirestore } from "@/lib/firebase-admin";
 import { Timestamp } from "firebase-admin/firestore";
+import { revalidatePath } from "next/cache";
 import { getAuthenticatedUserId } from "@/app/actions/auth";
 
 // Types
+
 export interface Journal {
   id: string; // The date string (yyyy-mm-dd)
   createdAt: number;
   hidden: boolean;
-  preview?: string; // Derived from first entry
+  preview?: string;
 }
 
 export interface Entry {
@@ -17,6 +19,13 @@ export interface Entry {
   content: string;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface JournalData {
+  id: string;
+  createdAt: number;
+  hidden: boolean;
+  entries: Entry[];
 }
 
 // Actions
@@ -31,7 +40,7 @@ export async function getJournals(
   let query = db
     .collection(`users/${uid}/journals`)
     .where("hidden", "==", false)
-    .orderBy("__name__", "desc") // Orders by ID (date) descending
+    .orderBy("__name__", "desc")
     .limit(limitCount);
 
   if (startAfterId) {
@@ -50,16 +59,15 @@ export async function getJournals(
   }));
 }
 
-export async function getJournal(
-  date: string,
-): Promise<{ journal: Journal | null; entries: Entry[] }> {
+export async function getJournal(date: string): Promise<JournalData | null> {
   const uid = await getAuthenticatedUserId();
   const db = getAdminFirestore();
+
   const journalRef = db.doc(`users/${uid}/journals/${date}`);
   const journalSnap = await journalRef.get();
 
   if (!journalSnap.exists || journalSnap.data()?.hidden) {
-    return { journal: null, entries: [] };
+    return null;
   }
 
   const entriesSnap = await journalRef
@@ -75,11 +83,9 @@ export async function getJournal(
   }));
 
   return {
-    journal: {
-      id: journalSnap.id,
-      createdAt: journalSnap.data()?.createdAt?.toMillis() || 0,
-      hidden: journalSnap.data()?.hidden || false,
-    },
+    id: journalSnap.id,
+    createdAt: journalSnap.data()?.createdAt?.toMillis() || 0,
+    hidden: journalSnap.data()?.hidden || false,
     entries,
   };
 }
@@ -87,80 +93,77 @@ export async function getJournal(
 export async function createJournal(date: string) {
   const uid = await getAuthenticatedUserId();
   const db = getAdminFirestore();
+  const batch = db.batch();
+
   const journalRef = db.doc(`users/${uid}/journals/${date}`);
-
-  await journalRef.set(
-    {
-      createdAt: Timestamp.now(),
-      hidden: false,
-    },
-    { merge: true },
-  ); // Use merge to avoid overwriting if exists but was hidden
-
-  return { success: true };
-}
-
-export async function addEntry(date: string, content: string = "") {
-  const uid = await getAuthenticatedUserId();
-  const db = getAdminFirestore();
-  const journalRef = db.doc(`users/${uid}/journals/${date}`);
-
-  // Ensure journal exists
-  const journalSnap = await journalRef.get();
-  if (!journalSnap.exists) {
-    await createJournal(date);
-  }
-
   const entryRef = journalRef.collection("entries").doc();
-  const now = Timestamp.now();
 
-  await entryRef.set({
-    content,
+  batch.set(
+    journalRef,
+    { createdAt: Timestamp.now(), hidden: false },
+    { merge: true },
+  );
+
+  const now = Timestamp.now();
+  const DEFAULT_ENTRY_CONTENT =
+    "## Today's Journal Entry\n\nWrite your thoughts here...";
+  batch.set(entryRef, {
+    content: DEFAULT_ENTRY_CONTENT,
     createdAt: now,
     updatedAt: now,
   });
 
+  await batch.commit();
+  revalidatePath(`/app/${date}`);
+
+  return { journalId: date, entryId: entryRef.id, success: true };
+}
+
+export async function createJournalEntry(date: string) {
+  const uid = await getAuthenticatedUserId();
+  const db = getAdminFirestore();
+
+  const entryRef = db
+    .doc(`users/${uid}/journals/${date}`)
+    .collection("entries")
+    .doc();
+  const now = Timestamp.now();
+
+  await entryRef.set({ content: "", createdAt: now, updatedAt: now });
+
+  revalidatePath(`/app/${date}`);
+
   return {
     id: entryRef.id,
+    content: "",
     createdAt: now.toMillis(),
     updatedAt: now.toMillis(),
   };
 }
 
-export async function autoSaveEntry(
+export async function saveJournalEntry(
   date: string,
   entryId: string,
   content: string,
 ) {
   const uid = await getAuthenticatedUserId();
   const db = getAdminFirestore();
-  const entryRef = db.doc(`users/${uid}/journals/${date}/entries/${entryId}`);
 
-  await entryRef.update({
+  await db.doc(`users/${uid}/journals/${date}/entries/${entryId}`).update({
     content,
     updatedAt: Timestamp.now(),
   });
 
+  revalidatePath(`/app/${date}`);
   return { success: true };
 }
 
-export async function softDeleteJournal(date: string) {
+export async function deleteJournalEntry(date: string, entryId: string) {
   const uid = await getAuthenticatedUserId();
   const db = getAdminFirestore();
-  const journalRef = db.doc(`users/${uid}/journals/${date}`);
 
-  await journalRef.update({
-    hidden: true,
-  });
+  await db.doc(`users/${uid}/journals/${date}/entries/${entryId}`).delete();
 
-  return { success: true };
-}
-
-export async function hardDeleteEntry(date: string, entryId: string) {
-  const uid = await getAuthenticatedUserId();
-  const db = getAdminFirestore();
-  const entryRef = db.doc(`users/${uid}/journals/${date}/entries/${entryId}`);
-
-  await entryRef.delete();
+  revalidatePath(`/app/${date}`);
   return { success: true };
 }

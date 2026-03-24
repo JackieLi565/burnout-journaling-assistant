@@ -1,7 +1,4 @@
-import {
-  getJournal,
-  createJournalWithEntry,
-} from "@/app/actions/journal-actions";
+import { getJournal, createJournal } from "@/app/actions/journal";
 import { JournalEditor } from "@/components/journal/journal-editor";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
@@ -45,7 +42,7 @@ export default async function JournalDatePage({ params }: PageProps) {
 
   async function handleCreate() {
     "use server";
-    await createJournalWithEntry(date);
+    await createJournal(date);
     // revalidatePath is called inside the action
   }
 

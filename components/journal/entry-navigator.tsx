@@ -20,7 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Entry } from "@/app/actions/journal-actions";
+import { Entry } from "@/app/actions/journal";
 
 interface EntryNavigatorProps {
   entries: Entry[];

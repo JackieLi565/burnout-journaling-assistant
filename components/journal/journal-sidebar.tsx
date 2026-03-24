@@ -56,14 +56,16 @@ export function JournalSidebar({ today }: JournalSidebarProps) {
         <SidebarMenu>
           <SidebarMenuItem>
             {/* Expanded: Title and Trigger */}
-            <div className="flex items-center justify-between group-data-[collapsible=icon]:hidden">
-              <SidebarMenuButton
-                size="lg"
-                asChild
-                className="w-auto hover:bg-transparent"
-              >
-                <span className="text-xl font-semibold">Capstone</span>
-              </SidebarMenuButton>
+            <div className="flex items-center justify-between ">
+              <div className="group-data-[collapsible=icon]:hidden">
+                <SidebarMenuButton
+                  size="lg"
+                  asChild
+                  className="w-auto hover:bg-transparent"
+                >
+                  <span className="text-xl font-semibold">Capstone</span>
+                </SidebarMenuButton>
+              </div>
               <SidebarTrigger className="h-8 w-8" />
             </div>
           </SidebarMenuItem>
@@ -192,6 +194,7 @@ function JournalListGroup({ today }: { today: string }) {
 
   // Filter out today's journal from the list to avoid duplication
   const filteredJournals = journals.filter((journal) => journal.id !== today);
+  const containsToday = journals.some((journal) => journal.id === today);
 
   if (error) {
     return (
@@ -277,7 +280,7 @@ function JournalListGroup({ today }: { today: string }) {
               {/* Only show if we have more or are loading */}
               <div ref={observerTarget} className="h-4 w-full" />
 
-              {!loading && filteredJournals.length === 0 && (
+              {!loading && filteredJournals.length === 0 && !containsToday && (
                 <div className="py-8 text-center text-sm text-muted-foreground group-data-[collapsible=icon]:hidden">
                   No past journals found.
                 </div>

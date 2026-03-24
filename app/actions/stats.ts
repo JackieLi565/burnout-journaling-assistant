@@ -2,7 +2,7 @@
 "use server";
 
 import { getAuthenticatedUserId } from "@/app/actions/auth";
-import { db } from "@/lib/firebase-admin";
+import { getAdminFirestore } from "@/lib/firebase-admin";
 
 export type QuizStat = {
     date: string;
@@ -14,6 +14,7 @@ export async function getQuizStats(): Promise<QuizStat[]> {
     const uid = await getAuthenticatedUserId();
 
     try {
+        const db = getAdminFirestore();
         const snapshot = await db
             .collection("users")
             .doc(uid)

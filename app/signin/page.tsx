@@ -1,11 +1,10 @@
 import { SigninForm } from "@/components/auth/signin-form";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifySessionAction } from "../actions/auth";
+import { getSessionCookie } from "@/utils/next";
 
 export default async function SigninPage() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("__session")?.value;
+  const sessionCookie = await getSessionCookie();
 
   if (sessionCookie) {
     const decodedToken = await verifySessionAction(sessionCookie);

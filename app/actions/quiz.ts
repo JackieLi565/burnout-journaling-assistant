@@ -2,12 +2,13 @@
 "use server";
 
 import { getAuthenticatedUserId } from "@/app/actions/auth";
-import { db } from "@/lib/firebase-admin";
+import { getAdminFirestore } from "@/lib/firebase-admin";
 
 export async function submitQuizResult(responses: Record<number, number>) {
     const uid = await getAuthenticatedUserId();
 
     try {
+        const db = getAdminFirestore();
         console.log("User Authenticated:", uid); //TODO remove
         const quizData = {
             responses: responses, // The raw map of {0: 3, 1: 0, ...}

@@ -6,11 +6,11 @@ import { format, parseISO } from "date-fns";
 import { Edit2, Eye, Settings2 } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import {
-  createEntry,
-  saveEntry,
-  deleteEntry,
+  createJournalEntry,
+  saveJournalEntry,
+  deleteJournalEntry,
   Entry,
-} from "@/app/actions/journal-actions";
+} from "@/app/actions/journal";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { EntryNavigator } from "./entry-navigator";
@@ -25,7 +25,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { useSidebar } from "@/components/ui/sidebar";
 import { useAnalysis } from "@/components/analysis-provider";
 import { useRouter } from "next/navigation";
 
@@ -35,7 +35,6 @@ interface JournalEditorProps {
 }
 
 export function JournalEditor({ date, initialEntries }: JournalEditorProps) {
-  const { state, isMobile } = useSidebar();
   const { setAnalysisResult, setIsAnalyzing } = useAnalysis();
   const router = useRouter();
 
@@ -69,7 +68,7 @@ export function JournalEditor({ date, initialEntries }: JournalEditorProps) {
 
       setIsSaving(true);
       try {
-        await saveEntry(date, activeEntryId, debouncedContent);
+        await saveJournalEntry(date, activeEntryId, debouncedContent);
         setLastSavedContent(debouncedContent);
 
         // Update local entries list to reflect changes
@@ -113,7 +112,7 @@ export function JournalEditor({ date, initialEntries }: JournalEditorProps) {
 
     if (activeEntryId && content !== lastSavedContent) {
       setIsSaving(true);
-      saveEntry(date, activeEntryId, content).then(() => {
+      saveJournalEntry(date, activeEntryId, content).then(() => {
         setIsSaving(false);
       });
       setEntries((prev) =>
@@ -135,12 +134,12 @@ export function JournalEditor({ date, initialEntries }: JournalEditorProps) {
       setEntries((prev) =>
         prev.map((e) => (e.id === activeEntryId ? { ...e, content } : e)),
       );
-      saveEntry(date, activeEntryId, content);
+      saveJournalEntry(date, activeEntryId, content);
     }
 
     setIsSaving(true);
     try {
-      const newEntry = await createEntry(date);
+      const newEntry = await createJournalEntry(date);
       const entryObj: Entry = {
         id: newEntry.id,
         content: "",
@@ -179,7 +178,7 @@ export function JournalEditor({ date, initialEntries }: JournalEditorProps) {
     }
 
     try {
-      await deleteEntry(date, id);
+      await deleteJournalEntry(date, id);
     } catch (e) {
       console.error("Failed to delete", e);
       setEntries(prevEntries);
@@ -194,9 +193,6 @@ export function JournalEditor({ date, initialEntries }: JournalEditorProps) {
       <div className="h-14 shrink-0 border-b flex items-center justify-between px-4 bg-card/10 relative">
         {/* Left: Date */}
         <div className="flex items-center">
-          {(state === "collapsed" || isMobile) && (
-            <SidebarTrigger className="mr-2" />
-          )}
           <h2 className="text-lg font-semibold tracking-tight">
             {format(parseISO(date), "MMMM d, yyyy")}
           </h2>

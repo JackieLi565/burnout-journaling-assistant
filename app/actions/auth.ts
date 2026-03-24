@@ -1,16 +1,20 @@
 "use server";
 
-import { initAdmin } from "@/lib/firebase-admin";
-import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
+import { getAdminAuth, getAdminFirestore } from "@/lib/firebase-admin";
+import { getSessionCookie } from "@/utils/next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
+/**
+ * `loginAction` verifies the ID token and creates a user account in Firestore if it doesn't exists.
+ *
+ * @param idToken ID token obtained from client
+ * @param redirectUrl
+ */
 export async function loginAction(idToken: string, redirectUrl?: string) {
-  const app = initAdmin();
-  const auth = getAuth(app);
-  const db = getFirestore(app);
+  const auth = getAdminAuth();
+  const db = getAdminFirestore();
   let decodedToken;
   try {
     decodedToken = await auth.verifyIdToken(idToken);
@@ -28,6 +32,7 @@ export async function loginAction(idToken: string, redirectUrl?: string) {
   if (!userSnap.exists) {
     await userRef.set({
       email: email,
+      isNewUser: true,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -60,15 +65,14 @@ export async function logoutAction() {
   redirect("/signin");
 }
 
-export const verifySessionAction = cache(async (idToken: string) => {
-  const app = initAdmin();
-  const auth = getAuth(app);
+export const verifySessionAction = cache(async (sessionCookie: string) => {
+  const auth = getAdminAuth();
 
   try {
-    const decodedToken = await auth.verifyIdToken(idToken);
+    const decodedToken = await auth.verifySessionCookie(sessionCookie, true);
     return decodedToken;
   } catch (error) {
-    console.error("Error verifying ID token:", error);
+    console.error("Error verifying session cookie:", error);
     return undefined;
   }
 });
@@ -77,8 +81,7 @@ export const verifySessionAction = cache(async (idToken: string) => {
  * Helper function to get the authenticated user's UID. If not authenticated, redirects to signin.
  */
 export async function getAuthenticatedUserId() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("__session")?.value;
+  const sessionCookie = await getSessionCookie();
 
   if (!sessionCookie) {
     redirect("/signin");

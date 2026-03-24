@@ -13,7 +13,3 @@ export const emulatorConfig = {
   firestorePort: process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_PORT || "8080",
   storagePort: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_EMULATOR_PORT || "9199",
 };
-
-export const adminConfig = {
-  serviceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH,
-};

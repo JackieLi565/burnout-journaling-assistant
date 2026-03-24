@@ -1,8 +1,7 @@
 "use server";
 
-import { verifySession } from "@/lib/auth-rsc";
-import { cookies } from "next/headers";
-import { db } from "@/lib/firebase-admin";
+import { getAuthenticatedUserId } from "@/app/actions/auth";
+import { getAdminFirestore } from "@/lib/firebase-admin";
 import { getUserProfile } from "./profile";
 
 export type HrvDataPoint = {
@@ -12,14 +11,10 @@ export type HrvDataPoint = {
 };
 
 export async function getHrvStats(): Promise<HrvDataPoint[]> {
+    const uid = await getAuthenticatedUserId();
+
     try {
-        const cookieStore = await cookies();
-        const sessionCookie = cookieStore.get("__session")?.value;
-        if (!sessionCookie) return [];
-
-        const decodedToken = await verifySession(sessionCookie);
-        const uid = decodedToken.uid;
-
+        const db = getAdminFirestore();
         const profile = await getUserProfile();
         const timezone = profile.timezone || "UTC";
 

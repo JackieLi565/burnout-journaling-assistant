@@ -1,11 +1,7 @@
 import "server-only";
 import { initializeApp, getApp, getApps, cert } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore"; // <--- 1. ADD THIS
-import {
-  adminConfig,
-  emulatorConfig,
-  firebaseConfig,
-} from "@/configs/firebase";
+import { getFirestore } from "firebase-admin/firestore";
+import { emulatorConfig, firebaseConfig } from "@/configs/firebase";
 import { getAuth } from "firebase-admin/auth";
 
 export function initAdmin() {
@@ -19,18 +15,31 @@ export function initAdmin() {
     process.env.FIREBASE_STORAGE_EMULATOR_HOST = `${host}:${storagePort}`;
   }
 
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT_PATH)
+    throw new Error(
+      "FIREBASE_SERVICE_ACCOUNT_PATH environment variable is not set.",
+    );
+
   return initializeApp({
-    credential: cert(adminConfig.serviceAccountPath),
+    credential: cert(process.env.FIREBASE_SERVICE_ACCOUNT_PATH),
     projectId: firebaseConfig.projectId,
     storageBucket: firebaseConfig.storageBucket,
   });
 }
 
+/**
+ * Returns a Firestore instance for the first initialized app. If no app is initialized
+ * an app will be initialized.
+ */
 export function getAdminFirestore() {
   const app = initAdmin();
   return getFirestore(app);
 }
 
+/**
+ * Returns an Auth instance for the first initialized app. If no app is initialized
+ * an app will be initialized.
+ */
 export function getAdminAuth() {
   const app = initAdmin();
   return getAuth(app);
