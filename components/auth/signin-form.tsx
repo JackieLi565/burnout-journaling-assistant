@@ -123,7 +123,7 @@ export function SigninForm() {
       setLoading(false);
       return;
     }
-
+    
     if (idToken) {
       await loginAction(idToken);
     }
