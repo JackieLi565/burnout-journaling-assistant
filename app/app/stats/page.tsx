@@ -1,6 +1,6 @@
 // app/stats/page.tsx
 import { getQuizStats } from "@/app/actions/stats";
-import StatsChart from "./StatsChart"; // We will create this next
+import StatsChart from "./stats-chart"; // We will create this next
 
 export default async function StatsPage() {
     const data = await getQuizStats();
