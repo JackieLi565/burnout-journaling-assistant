@@ -124,18 +124,18 @@ export default function StatisticsPage() {
 
         <div className="grid gap-6">
           <Suspense
-            fallback={<Skeleton className="w-full h-[450px] rounded-xl" />}
+            fallback={<Skeleton className="w-full h-[220px] rounded-xl" />}
           >
-            <HrvStatsSection />
+            {/* This section shows journal BRI history and the latest cumulative BRI */}
+            <JournalBriSection />
           </Suspense>
         </div>
 
         <div className="grid gap-6">
           <Suspense
-            fallback={<Skeleton className="w-full h-[220px] rounded-xl" />}
+            fallback={<Skeleton className="w-full h-[450px] rounded-xl" />}
           >
-            {/* This section shows journal BRI history and the latest cumulative BRI */}
-            <JournalBriSection />
+            <HrvStatsSection />
           </Suspense>
         </div>
       </div>
