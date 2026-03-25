@@ -1,8 +1,8 @@
 "use server";
 
-import { verifySession } from "@/lib/auth-rsc";
 import { cookies } from "next/headers";
 import { db } from "@/lib/firebase-admin";
+import { getAuthenticatedUserId } from "./auth";
 
 export type JournalBriPoint = {
   date: string;
@@ -18,14 +18,7 @@ export type JournalBriSummary = {
 
 export async function getJournalBriSummary(): Promise<JournalBriSummary> {
   try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("__session")?.value;
-    if (!sessionCookie) {
-      return { points: [], latestBri: null, latestCumulativeBri: null };
-    }
-
-    const decodedToken = await verifySession(sessionCookie);
-    const uid = decodedToken.uid;
+    const uid = await getAuthenticatedUserId();
 
     const snapshot = await db
       .collection("users")
@@ -59,4 +52,3 @@ export async function getJournalBriSummary(): Promise<JournalBriSummary> {
     return { points: [], latestBri: null, latestCumulativeBri: null };
   }
 }
-

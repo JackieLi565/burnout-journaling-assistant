@@ -27,7 +27,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useAnalysis } from "@/components/analysis-provider";
-import { useRouter } from "next/navigation";
 
 interface JournalEditorProps {
   date: string;
@@ -36,7 +35,6 @@ interface JournalEditorProps {
 
 export function JournalEditor({ date, initialEntries }: JournalEditorProps) {
   const { setAnalysisResult, setIsAnalyzing } = useAnalysis();
-  const router = useRouter();
 
   // State
   const [entries, setEntries] = useState<Entry[]>(initialEntries);
