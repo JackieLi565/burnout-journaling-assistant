@@ -126,7 +126,7 @@ class BurnoutAnalysisService:
                             ],
                         ),
                     ],
-                    model_id="gemini-2.5-flash",
+                    model_id="gemini-3.1-flash-lite-preview",
                     api_key=self.api_key,
                 )
 
