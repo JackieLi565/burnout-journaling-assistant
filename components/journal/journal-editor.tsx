@@ -34,7 +34,7 @@ interface JournalEditorProps {
 }
 
 export function JournalEditor({ date, initialEntries }: JournalEditorProps) {
-  const { setAnalysisResult, setIsAnalyzing } = useAnalysis();
+  const { setAnalysisResult, setIsAnalyzing, isAnalyzing } = useAnalysis();
 
   // State
   const [entries, setEntries] = useState<Entry[]>(initialEntries);
@@ -253,6 +253,8 @@ export function JournalEditor({ date, initialEntries }: JournalEditorProps) {
                 </div>
                 <Button
                   variant="outline"
+                  className="hover:cursor-pointer"
+                  disabled={isAnalyzing}
                   onClick={async () => {
                     setIsAnalyzing(true);
                     try {

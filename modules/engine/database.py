@@ -12,7 +12,10 @@ def initialize_firebase():
         if settings.USE_EMULATOR:
             # Use Firebase Emulator
             os.environ["FIRESTORE_EMULATOR_HOST"] = settings.FIRESTORE_EMULATOR_HOST
-            cred = credentials.Certificate("C:/Users/Jonah/Downloads/capstone-64f78-firebase-adminsdk-fbsvc-22f94137ca.json")#gotta use some actual credentials here foir the emulator idek why
+            if (not settings.FIREBASE_CREDENTIALS_PATH):
+                raise ValueError("Firebase emulator credentials path is not specified")
+            
+            cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
             # Initialize with default credentials for emulator
             firebase_admin.initialize_app(
                 cred,
