@@ -53,7 +53,7 @@ interface JournalSidebarProps {
 
 // Main Sidebar Component
 export function JournalSidebar({ today, displayName, email }: JournalSidebarProps) {
-  const username = email ? email.split("@")[0] : "";
+  const username = email ? email.split("@")[0] : displayName || "";
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -67,7 +67,7 @@ export function JournalSidebar({ today, displayName, email }: JournalSidebarProp
                   asChild
                   className="w-auto hover:bg-transparent"
                 >
-                  <span className="text-xl font-semibold">{username}</span>
+                  <span className="text-xl font-semibold">Extinguish</span>
                 </SidebarMenuButton>
               </div>
               <SidebarTrigger className="h-8 w-8" />
@@ -113,10 +113,10 @@ export function JournalSidebar({ today, displayName, email }: JournalSidebarProp
       </SidebarContent>
 
       <SidebarFooter>
-        {displayName && (
+        {username && (
           <div className="px-3 py-2 group-data-[collapsible=icon]:hidden">
             <p className="text-xs text-muted-foreground truncate">Signed in as</p>
-            <p className="text-sm font-medium truncate">{displayName}</p>
+            <p className="text-sm font-medium truncate">{username}</p>
           </div>
         )}
         <SidebarMenu>
