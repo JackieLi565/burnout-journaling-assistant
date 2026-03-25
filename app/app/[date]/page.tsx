@@ -74,7 +74,7 @@ export default async function JournalDatePage({ params }: PageProps) {
           </form>
         </div>
       ) : (
-        <JournalEditor date={date} initialEntries={journalData.entries} />
+        <JournalEditor date={date} initialEntries={journalData.entries} today={userToday} />
       )}
     </>
   );

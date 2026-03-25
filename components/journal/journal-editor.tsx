@@ -26,15 +26,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useAnalysis } from "@/components/analysis-provider";
-
 interface JournalEditorProps {
   date: string;
   initialEntries: Entry[];
+  today: string;
 }
 
-export function JournalEditor({ date, initialEntries }: JournalEditorProps) {
-  const { setAnalysisResult, setIsAnalyzing, isAnalyzing } = useAnalysis();
+export function JournalEditor({ date, initialEntries, today }: JournalEditorProps) {
+  const isToday = date === today;
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // State
   const [entries, setEntries] = useState<Entry[]>(initialEntries);
@@ -251,10 +251,15 @@ export function JournalEditor({ date, initialEntries }: JournalEditorProps) {
                     Journal entry options
                   </p>
                 </div>
+                {!isToday && (
+                  <p className="text-xs text-muted-foreground">
+                    Analysis is only available for today&apos;s entries.
+                  </p>
+                )}
                 <Button
                   variant="outline"
                   className="hover:cursor-pointer"
-                  disabled={isAnalyzing}
+                  disabled={isAnalyzing || !isToday}
                   onClick={async () => {
                     setIsAnalyzing(true);
                     try {

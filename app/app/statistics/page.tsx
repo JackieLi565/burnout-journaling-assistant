@@ -10,14 +10,16 @@ async function HrvStatsSection() {
 }
 
 async function JournalBriSection() {
-  const { points, latestBri, latestCumulativeBri } = await getJournalBriSummary();
+  const { points, latestBri, latestCumulativeBri } =
+    await getJournalBriSummary();
 
   if (points.length === 0) {
     return (
       <div className="p-6 rounded-xl border bg-card/50">
         <h3 className="text-lg font-semibold mb-2">Journal Burnout Risk</h3>
         <p className="text-sm text-muted-foreground">
-          No analyzed journals yet. Run an analysis from the journal editor to see your burnout risk over time.
+          No analyzed journals yet. Run an analysis from the journal editor to
+          see your burnout risk over time.
         </p>
       </div>
     );
@@ -29,7 +31,8 @@ async function JournalBriSection() {
         <div>
           <h3 className="text-lg font-semibold">Journal Burnout Risk</h3>
           <p className="text-sm text-muted-foreground">
-            These scores come from analyzing your journal entries with the burnout engine.
+            These scores come from analyzing your journal entries with the
+            burnout engine.
           </p>
         </div>
         <div className="flex gap-6">
@@ -46,7 +49,9 @@ async function JournalBriSection() {
               Latest cumulative BRI
             </p>
             <p className="text-2xl font-semibold">
-              {latestCumulativeBri !== null ? Math.round(latestCumulativeBri) : "–"}
+              {latestCumulativeBri !== null
+                ? Math.round(latestCumulativeBri)
+                : "–"}
             </p>
           </div>
         </div>
@@ -69,13 +74,19 @@ async function JournalBriSection() {
                 <div className="flex items-center gap-4">
                   <span className="text-xs">
                     BRI:{" "}
-                    {p.bri !== null ? Math.round(p.bri) : <span className="text-muted-foreground">n/a</span>}
+                    {p.bri !== null ? (
+                      Math.round(p.bri)
+                    ) : (
+                      <span className="text-muted-foreground">n/a</span>
+                    )}
                   </span>
                   <span className="text-xs">
                     Cum:{" "}
-                    {p.cumulativeBri !== null
-                      ? Math.round(p.cumulativeBri)
-                      : <span className="text-muted-foreground">n/a</span>}
+                    {p.cumulativeBri !== null ? (
+                      Math.round(p.cumulativeBri)
+                    ) : (
+                      <span className="text-muted-foreground">n/a</span>
+                    )}
                   </span>
                 </div>
               </div>
@@ -88,25 +99,32 @@ async function JournalBriSection() {
 
 export default function StatisticsPage() {
   return (
-    <div className="p-8 space-y-8 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Insights</h1>
-        <p className="text-muted-foreground mt-2">
-          Explore how your physiology and journaling patterns relate to burnout risk.
-        </p>
-      </div>
+    <div className="w-full overflow-y-auto">
+      <div className="p-8 space-y-8 max-w-5xl mx-auto ">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Insights</h1>
+          <p className="text-muted-foreground mt-2">
+            Explore how your physiology and journaling patterns relate to
+            burnout risk.
+          </p>
+        </div>
 
-      <div className="grid gap-6">
-        <Suspense fallback={<Skeleton className="w-full h-[450px] rounded-xl" />}>
-          <HrvStatsSection />
-        </Suspense>
-      </div>
+        <div className="grid gap-6">
+          <Suspense
+            fallback={<Skeleton className="w-full h-[450px] rounded-xl" />}
+          >
+            <HrvStatsSection />
+          </Suspense>
+        </div>
 
-      <div className="grid gap-6">
-        <Suspense fallback={<Skeleton className="w-full h-[220px] rounded-xl" />}>
-          {/* This section shows journal BRI history and the latest cumulative BRI */}
-          <JournalBriSection />
-        </Suspense>
+        <div className="grid gap-6">
+          <Suspense
+            fallback={<Skeleton className="w-full h-[220px] rounded-xl" />}
+          >
+            {/* This section shows journal BRI history and the latest cumulative BRI */}
+            <JournalBriSection />
+          </Suspense>
+        </div>
       </div>
     </div>
   );
