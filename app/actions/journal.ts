@@ -228,3 +228,93 @@ export async function analyzeAndSaveJournal(
   revalidatePath(`/app/${date}`);
   return data;
 }
+
+export async function analyzeAllUnanalyzedJournals(): Promise<{
+  analyzed: number;
+  skipped: number;
+  errors: number;
+}> {
+  const uid = await getAuthenticatedUserId();
+  const db = getAdminFirestore();
+
+  // Fetch all journals in chronological order — order matters for cumulative BRI
+  const snapshot = await db
+    .collection("users")
+    .doc(uid)
+    .collection("journals")
+    .orderBy("__name__", "asc")
+    .get();
+
+  const unanalyzed = snapshot.docs.filter(
+    (doc) => !doc.data().hidden && typeof doc.data().bri !== "number",
+  );
+
+  let analyzed = 0;
+  let skipped = 0;
+  let errors = 0;
+
+  for (const journalDoc of unanalyzed) {
+    const date = journalDoc.id;
+
+    const entriesSnap = await db
+      .doc(`users/${uid}/journals/${date}`)
+      .collection("entries")
+      .orderBy("createdAt", "asc")
+      .get();
+
+    const text = entriesSnap.docs
+      .map((e) => (e.data().content || "").toString())
+      .join("\n\n")
+      .trim();
+
+    if (!text) {
+      skipped++;
+      continue;
+    }
+
+    try {
+      const response = await fetch(
+        "http://localhost:8000/api/v1/journals/analyze",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: uid, journal_date: date, texts: [text] }),
+          cache: "no-store",
+        },
+      );
+
+      if (!response.ok) {
+        const message = await response.text().catch(() => "");
+        throw new Error(`Analysis failed (${response.status}): ${message}`);
+      }
+
+      const data = (await response.json()) as BurnoutAnalysisResult;
+      const bri = Number(data.overall_score);
+      const cumulativeBriRaw = data.cumulative_bri;
+      const cumulativeBri =
+        cumulativeBriRaw === undefined || cumulativeBriRaw === null
+          ? null
+          : Number(cumulativeBriRaw);
+
+      await db.doc(`users/${uid}/journals/${date}`).set(
+        {
+          bri: Number.isFinite(bri) ? bri : null,
+          cumulativeBri:
+            cumulativeBri === null || !Number.isFinite(cumulativeBri)
+              ? null
+              : cumulativeBri,
+          briUpdatedAt: Timestamp.now(),
+        },
+        { merge: true },
+      );
+
+      analyzed++;
+    } catch (e) {
+      console.error(`Failed to analyze journal ${date}:`, e);
+      errors++;
+    }
+  }
+
+  revalidatePath("/app/statistics");
+  return { analyzed, skipped, errors };
+}

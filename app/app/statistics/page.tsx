@@ -3,6 +3,7 @@ import { getHrvStats } from "@/app/actions/hrv";
 import { getJournalBriSummary } from "@/app/actions/journal-bri";
 import HrvChart from "@/components/statistics/HrvChart";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AnalyzeAllButton } from "@/components/statistics/analyze-all-button";
 
 async function HrvStatsSection() {
   const { data, error } = await getHrvStats();
@@ -110,12 +111,15 @@ export default function StatisticsPage() {
   return (
     <div className="w-full overflow-y-auto">
       <div className="p-8 space-y-8 max-w-5xl mx-auto ">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Insights</h1>
-          <p className="text-muted-foreground mt-2">
-            Explore how your physiology and journaling patterns relate to
-            burnout risk.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Insights</h1>
+            <p className="text-muted-foreground mt-2">
+              Explore how your physiology and journaling patterns relate to
+              burnout risk.
+            </p>
+          </div>
+          <AnalyzeAllButton />
         </div>
 
         <div className="grid gap-6">
