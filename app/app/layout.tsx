@@ -13,7 +13,7 @@ export default async function AppLayout({
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full overflow-hidden">
-        <JournalSidebar today={today} displayName={profile.displayName} />
+        <JournalSidebar today={today} displayName={profile.displayName} email={profile.email} />
         <main className="flex-1 overflow-hidden h-full relative flex flex-col w-full">
           {children}
         </main>

@@ -19,14 +19,20 @@ export type ProfileData = z.infer<typeof profileSchema>;
 
 export async function getUserProfile() {
   const uid = await getAuthenticatedUserId();
-  const db = getAdminFirestore();
+  const [db, auth] = [getAdminFirestore(), getAdminAuth()];
 
-  const userDoc = await db.collection("users").doc(uid).get();
+  const [userDoc, authUser] = await Promise.all([
+    db.collection("users").doc(uid).get(),
+    auth.getUser(uid),
+  ]);
+
+  const email = authUser.email || "";
 
   // Default return
   if (!userDoc.exists)
     return {
       displayName: "",
+      email,
       timezone: "UTC",
       dateFormat: "YYYY-MM-DD",
       timeFormat: "24h",
@@ -36,6 +42,7 @@ export async function getUserProfile() {
 
   return {
     displayName: data?.displayName || "",
+    email,
     timezone: data?.timezone || "UTC",
     dateFormat: data?.dateFormat || "YYYY-MM-DD",
     timeFormat: data?.timeFormat || "24h",

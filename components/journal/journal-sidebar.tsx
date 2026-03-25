@@ -48,10 +48,12 @@ import { Separator } from "@/components/ui/separator";
 interface JournalSidebarProps {
   today: string;
   displayName?: string;
+  email?: string;
 }
 
 // Main Sidebar Component
-export function JournalSidebar({ today, displayName }: JournalSidebarProps) {
+export function JournalSidebar({ today, displayName, email }: JournalSidebarProps) {
+  const username = email ? email.split("@")[0] : "";
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -65,7 +67,7 @@ export function JournalSidebar({ today, displayName }: JournalSidebarProps) {
                   asChild
                   className="w-auto hover:bg-transparent"
                 >
-                  <span className="text-xl font-semibold">Capstone</span>
+                  <span className="text-xl font-semibold">{username}</span>
                 </SidebarMenuButton>
               </div>
               <SidebarTrigger className="h-8 w-8" />
