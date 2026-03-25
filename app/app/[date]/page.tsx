@@ -5,9 +5,7 @@ import { format } from "date-fns";
 import { getUserProfile } from "@/app/actions/profile";
 import { getCurrentDateInTimezone } from "@/utils/date";
 import { redirect } from "next/navigation";
-import { getAuthenticatedUserId } from "@/app/actions/auth";
-import { getUserOnboardingProfile } from "@/app/actions/onboarding";
-import { GeneralOnboardingDialog } from "@/components/onboarding/general-onboarding-dialog";
+
 
 interface PageProps {
   params: Promise<{ date: string }>;
@@ -42,8 +40,6 @@ export default async function JournalDatePage({ params }: PageProps) {
   }
 
   // 2. Future Date Guard
-  const userId = await getAuthenticatedUserId();
-  const onboardingProfile = await getUserOnboardingProfile(userId);
   const profile = await getUserProfile();
   const timezone = profile.timezone || "UTC";
   const userToday = getCurrentDateInTimezone(timezone);
@@ -67,10 +63,6 @@ export default async function JournalDatePage({ params }: PageProps) {
 
   return (
     <>
-      {!onboardingProfile.generalOnboardingCompleted && (
-        <GeneralOnboardingDialog userId={userId} isOpen={true} />
-      )}
-
       {!journalData ? (
         <div className="flex flex-col items-center justify-center h-full gap-6 bg-background">
           <div className="text-center space-y-2">
