@@ -22,7 +22,7 @@ export function AnalyzeAllButton() {
       const r = await analyzeAllUnanalyzedJournals();
       setResult(r);
     } catch (e) {
-      setError("Analysis failed. Is the engine running?");
+      setError(e instanceof Error ? e.message : "Analysis failed.");
     } finally {
       setIsLoading(false);
     }
@@ -30,11 +30,16 @@ export function AnalyzeAllButton() {
 
   let statusText: string | null = null;
   if (result) {
-    if (result.analyzed === 0) {
+    const { analyzed, errors, skipped } = result;
+    if (analyzed === 0 && errors === 0 && skipped === 0) {
       statusText = "All journals already analyzed.";
+    } else if (analyzed === 0 && errors > 0) {
+      statusText = `${errors} journal${errors !== 1 ? "s" : ""} failed. Is the engine running?`;
+    } else if (analyzed === 0 && skipped > 0) {
+      statusText = `${skipped} journal${skipped !== 1 ? "s" : ""} skipped (no content).`;
     } else {
-      statusText = `${result.analyzed} journal${result.analyzed !== 1 ? "s" : ""} analyzed`;
-      if (result.errors > 0) statusText += `, ${result.errors} failed`;
+      statusText = `${analyzed} journal${analyzed !== 1 ? "s" : ""} analyzed`;
+      if (errors > 0) statusText += `, ${errors} failed`;
       statusText += ".";
     }
   }
