@@ -17,23 +17,20 @@ const profileSchema = z.object({
 
 export type ProfileData = z.infer<typeof profileSchema>;
 
-// --- Actions ---
-
-export async function getUserProfile(): Promise<ProfileData> {
+export async function getUserProfile() {
   const uid = await getAuthenticatedUserId();
   const db = getAdminFirestore();
 
   const userDoc = await db.collection("users").doc(uid).get();
 
-  if (!userDoc.exists) {
-    // Return default values if user doc doesn't exist (though it should)
+  // Default return
+  if (!userDoc.exists)
     return {
       displayName: "",
       timezone: "UTC",
       dateFormat: "YYYY-MM-DD",
       timeFormat: "24h",
     };
-  }
 
   const data = userDoc.data();
 
@@ -56,13 +53,16 @@ export async function updateUserProfile(data: ProfileData) {
   }
 
   try {
-    await db.collection("users").doc(uid).set(
-      {
-        ...parsedData.data,
-        updatedAt: new Date(),
-      },
-      { merge: true }
-    );
+    await db
+      .collection("users")
+      .doc(uid)
+      .set(
+        {
+          ...parsedData.data,
+          updatedAt: new Date(),
+        },
+        { merge: true },
+      );
     return { success: true };
   } catch (error) {
     console.error("Error updating profile:", error);
@@ -86,7 +86,6 @@ export async function deleteUserAccount() {
     // 3. Clear session cookie
     const cookieStore = await cookies();
     cookieStore.delete("__session");
-
   } catch (error) {
     console.error("Error deleting account:", error);
     return { error: "Failed to delete account" };

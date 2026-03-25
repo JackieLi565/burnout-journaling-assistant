@@ -32,7 +32,6 @@ export async function loginAction(idToken: string, redirectUrl?: string) {
   if (!userSnap.exists) {
     await userRef.set({
       email: email,
-      isNewUser: true,
       createdAt: new Date(),
       updatedAt: new Date(),
     });

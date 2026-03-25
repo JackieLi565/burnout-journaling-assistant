@@ -1,17 +1,21 @@
 import { JournalSidebar } from "@/components/journal/journal-sidebar";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { getUserProfile } from "@/app/actions/profile";
+import { getUserOnboardingProfile } from "@/app/actions/onboarding";
 import { getCurrentDateInTimezone } from "@/utils/date";
 import { AnalysisProvider } from "@/components/analysis-provider";
+import { GeneralOnboardingDialog } from "@/components/onboarding/general-onboarding-dialog";
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const profile = await getUserProfile();
+  const [profile, onboarding] = await Promise.all([
+    getUserProfile(),
+    getUserOnboardingProfile(),
+  ]);
   const today = getCurrentDateInTimezone(profile.timezone);
-
   return (
     <AnalysisProvider>
       <SidebarProvider>
@@ -22,6 +26,9 @@ export default async function AppLayout({
           </main>
         </div>
       </SidebarProvider>
+      {!onboarding.generalOnboardingCompleted && (
+        <GeneralOnboardingDialog isOpen={true} />
+      )}
     </AnalysisProvider>
   );
 }

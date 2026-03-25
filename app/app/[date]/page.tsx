@@ -5,6 +5,9 @@ import { format } from "date-fns";
 import { getUserProfile } from "@/app/actions/profile";
 import { getCurrentDateInTimezone } from "@/utils/date";
 import { redirect } from "next/navigation";
+import { getAuthenticatedUserId } from "@/app/actions/auth";
+import { getUserOnboardingProfile } from "@/app/actions/onboarding";
+import { GeneralOnboardingDialog } from "@/components/onboarding/general-onboarding-dialog";
 
 interface PageProps {
   params: Promise<{ date: string }>;
@@ -25,6 +28,8 @@ export default async function JournalDatePage({ params }: PageProps) {
   }
 
   // 2. Future Date Guard
+  const userId = await getAuthenticatedUserId();
+  const onboardingProfile = await getUserOnboardingProfile(userId);
   const profile = await getUserProfile();
   const timezone = profile.timezone || "UTC";
   const userToday = getCurrentDateInTimezone(timezone);
@@ -46,25 +51,31 @@ export default async function JournalDatePage({ params }: PageProps) {
     // revalidatePath is called inside the action
   }
 
-  if (!journalData) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-6 bg-background">
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">{dateDisplay}</h1>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            Ready to capture your thoughts for{" "}
-            {date === userToday ? "today" : "this day"}?
-          </p>
+  return (
+    <>
+      {!onboardingProfile.generalOnboardingCompleted && (
+        <GeneralOnboardingDialog userId={userId} isOpen={true} />
+      )}
+
+      {!journalData ? (
+        <div className="flex flex-col items-center justify-center h-full gap-6 bg-background">
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight">{dateDisplay}</h1>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              Ready to capture your thoughts for{" "}
+              {date === userToday ? "today" : "this day"}?
+            </p>
+          </div>
+
+          <form action={handleCreate}>
+            <Button size="lg" className="px-8 font-semibold text-lg h-12">
+              Start Journal
+            </Button>
+          </form>
         </div>
-
-        <form action={handleCreate}>
-          <Button size="lg" className="px-8 font-semibold text-lg h-12">
-            Start Journal
-          </Button>
-        </form>
-      </div>
-    );
-  }
-
-  return <JournalEditor date={date} initialEntries={journalData.entries} />;
+      ) : (
+        <JournalEditor date={date} initialEntries={journalData.entries} />
+      )}
+    </>
+  );
 }

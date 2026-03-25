@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useJournals, Journal } from "@/hooks/use-journals";
 import QuizModal from "@/components/misc/quiz-modal";
+import FeedbackDialog from "@/components/misc/feedback-dialog";
 
 import {
   Popover,
@@ -125,14 +126,14 @@ export function JournalSidebar({ today }: JournalSidebarProps) {
                 className="w-56 p-1"
               >
                 <div className="flex flex-col gap-0.5">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="justify-start text-xs h-8"
-                  >
-                    <MessageSquare className="size-3.5 mr-2" />
-                    Send Feedback
-                  </Button>
+                  <FeedbackDialog
+                    trigger={
+                      <Button variant="ghost" size="sm" className="justify-start text-xs h-8 w-full">
+                        <MessageSquare className="size-3.5 mr-2" />
+                        Send Feedback
+                      </Button>
+                    }
+                  />
                   <Button
                     variant="ghost"
                     size="sm"
