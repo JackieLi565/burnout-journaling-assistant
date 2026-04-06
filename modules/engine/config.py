@@ -1,6 +1,5 @@
 """Configuration settings for the FastAPI backend."""
 import os
-from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -26,6 +25,12 @@ class Settings:
     
     # Gemini/LangExtract Configuration
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_LIVE_MODEL: str = os.getenv(
+        "GEMINI_LIVE_MODEL",
+        "models/gemini-3.1-flash-live-preview",
+    )
+    GEMINI_LIVE_VOICE: str = os.getenv("GEMINI_LIVE_VOICE", "Kore")
+    LIVE_SESSION_SECRET: str = os.getenv("LIVE_SESSION_SECRET", "")
     
     class Config:
         case_sensitive = True

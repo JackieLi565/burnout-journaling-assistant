@@ -40,6 +40,11 @@ firebase-debug.log*
 !.env.example
 venv/
 .venv
+modules/engine/venv/
+modules/engine/.env
+modules/engine/venv311/
+__pycache__/
+.pytest_cache/
 
 # vercel
 .vercel
@@ -51,6 +56,7 @@ next-env.d.ts
 # firebase
 firebase-admin-service-account.json
 service-account.remote.json
+service-account.local.json
 *-debug.log
 ui-debug.log
 .firebase/
