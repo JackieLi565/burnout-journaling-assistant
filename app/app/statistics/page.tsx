@@ -16,7 +16,8 @@ async function QuizSection() {
       <div className="p-6 rounded-xl border bg-card/50">
         <h3 className="text-lg font-semibold mb-2">Daily Quiz</h3>
         <p className="text-sm text-muted-foreground">
-          No quiz results yet. Complete a Daily Check-in to see your scores here.
+          No quiz results yet. Complete a Daily Check-in to see your scores
+          here.
         </p>
       </div>
     );
@@ -28,12 +29,15 @@ async function QuizSection() {
         <div>
           <h3 className="text-lg font-semibold">Daily Quiz</h3>
           <p className="text-sm text-muted-foreground">
-            Wellbeing score from each check-in (0–100, higher = less burnout indicators).
+            Wellbeing score from each check-in (0–100, higher = less burnout
+            indicators).
           </p>
         </div>
         {latestScore !== null && (
           <div className="shrink-0">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Latest score</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              Latest score
+            </p>
             <p className="text-2xl font-semibold">{latestScore}</p>
           </div>
         )}
@@ -43,7 +47,9 @@ async function QuizSection() {
         <QuizChart points={points} />
 
         <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">All scores</p>
+          <p className="text-xs font-medium text-muted-foreground">
+            All scores
+          </p>
           <div className="flex flex-col gap-1 max-h-[260px] overflow-y-auto text-sm">
             {points
               .slice()
@@ -87,8 +93,8 @@ async function JournalBriSection() {
       <div className="p-6 rounded-xl border bg-card/50">
         <h3 className="text-lg font-semibold mb-2">Journal Burnout Risk</h3>
         <p className="text-sm text-muted-foreground">
-          No analyzed journals yet. Use the &quot;Analyze All Journals&quot; button above
-          to generate scores.
+          No analyzed journals yet. Use the &quot;Analyze All Journals&quot;
+          button above to generate scores.
         </p>
       </div>
     );
@@ -106,15 +112,21 @@ async function JournalBriSection() {
         </div>
         <div className="flex gap-6 shrink-0">
           <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Latest BRI</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              Latest BRI
+            </p>
             <p className="text-2xl font-semibold">
               {latestBri !== null ? Math.round(latestBri) : "–"}
             </p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Latest cumulative BRI</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              Latest cumulative BRI
+            </p>
             <p className="text-2xl font-semibold">
-              {latestCumulativeBri !== null ? Math.round(latestCumulativeBri) : "–"}
+              {latestCumulativeBri !== null
+                ? Math.round(latestCumulativeBri)
+                : "–"}
             </p>
           </div>
         </div>
@@ -127,7 +139,9 @@ async function JournalBriSection() {
 
         {/* Score list */}
         <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">All scores</p>
+          <p className="text-xs font-medium text-muted-foreground">
+            All scores
+          </p>
           <div className="flex flex-col gap-1 max-h-[280px] overflow-y-auto text-sm">
             {points
               .slice()
@@ -184,7 +198,6 @@ export default function StatisticsPage() {
           <Suspense
             fallback={<Skeleton className="w-full h-[220px] rounded-xl" />}
           >
-            {/* This section shows journal BRI history and the latest cumulative BRI */}
             <JournalBriSection />
           </Suspense>
         </div>
