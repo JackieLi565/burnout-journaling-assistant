@@ -1,5 +1,6 @@
 "use server";
 
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getAdminFirestore } from "@/lib/firebase-admin";
 import { Timestamp } from "firebase-admin/firestore";
 import { revalidatePath } from "next/cache";
@@ -317,4 +318,49 @@ export async function analyzeAllUnanalyzedJournals(): Promise<{
 
   revalidatePath("/app/statistics");
   return { analyzed, skipped, errors };
+}
+
+export async function getJournalingSuggestion(date: string) {
+  const uid = await getAuthenticatedUserId();
+  const db = getAdminFirestore();
+
+  // 1. Fetch recent burnout data for context (BRI, etc.)
+  const journalRef = db.doc(`users/${uid}/journals/${date}`);
+  const journalSnap = await journalRef.get();
+  const journalData = journalSnap.data();
+
+  // 2. Fetch the current entry content if any
+  const entriesSnap = await journalRef
+    .collection("entries")
+    .orderBy("createdAt", "asc")
+    .get();
+  const currentContent = entriesSnap.docs
+    .map((doc) => doc.data().content)
+    .join("\n\n");
+
+  // 3. Initialize Gemini
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+  const prompt = `
+    You are a compassionate mental health assistant specializing in occupational burnout.
+    The user is journaling for the date: ${date}.
+    
+    Current Burnout Risk Index (BRI): ${journalData?.bri || "Unknown"}
+    Current journal content so far:
+    "${currentContent}"
+
+    Based on the principles of CBT, ACT, and Mindfulness, provide a single, short, and highly effective journaling prompt or intervention (like a breathing exercise or a cognitive reframing task) to help the user.
+    
+    Keep it under 3 sentences. Be direct but empathetic.
+  `;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    console.error("Gemini API error:", error);
+    return "Take a deep breath. Focus on one thing you can control right now.";
+  }
 }

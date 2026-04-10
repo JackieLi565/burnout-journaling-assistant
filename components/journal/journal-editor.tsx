@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { format, parseISO } from "date-fns";
-import { Edit2, Eye, Settings2 } from "lucide-react";
+import { Edit2, Eye, Settings2, Sparkles, Loader2 } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import {
   createJournalEntry,
@@ -11,6 +11,7 @@ import {
   deleteJournalEntry,
   Entry,
   analyzeAndSaveJournal,
+  getJournalingSuggestion,
 } from "@/app/actions/journal";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,6 +40,8 @@ export function JournalEditor({ date, initialEntries, today }: JournalEditorProp
   const isToday = date === today;
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isVoicePanelOpen, setIsVoicePanelOpen] = useState(false);
+  const [suggestion, setSuggestion] = useState<string | null>(null);
+  const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
 
   // State
   const [entries, setEntries] = useState<Entry[]>(initialEntries);
@@ -309,44 +312,95 @@ export function JournalEditor({ date, initialEntries, today }: JournalEditorProp
       )}
 
       {/* Editor Content Area */}
-      <div className="flex-1 overflow-hidden relative flex flex-col">
-        {activeEntryId ? (
-          isPreview ? (
-            content.trim() === "" ? (
-              <div
-                className="flex flex-col items-center justify-center h-full text-muted-foreground px-4 cursor-pointer"
-                onDoubleClick={() => setIsPreview(false)}
-              >
-                <p>This entry is empty. Double click to edit.</p>
-              </div>
-            ) : (
-              <div
-                className="flex-1 w-full overflow-y-auto scrollbar-gutter-stable cursor-text"
-                onDoubleClick={() => setIsPreview(false)}
-              >
-                <div className="max-w-4xl mx-auto p-8 prose dark:prose-invert min-h-full">
-                  <ReactMarkdown>{content}</ReactMarkdown>
+      <div className="flex-1 overflow-hidden relative flex flex-row">
+        <div className="flex-1 flex flex-col min-w-0">
+          {activeEntryId ? (
+            isPreview ? (
+              content.trim() === "" ? (
+                <div
+                  className="flex flex-col items-center justify-center h-full text-muted-foreground px-4 cursor-pointer"
+                  onDoubleClick={() => setIsPreview(false)}
+                >
+                  <p>This entry is empty. Double click to edit.</p>
                 </div>
-              </div>
+              ) : (
+                <div
+                  className="flex-1 w-full overflow-y-auto scrollbar-gutter-stable cursor-text"
+                  onDoubleClick={() => setIsPreview(false)}
+                >
+                  <div className="max-w-4xl mx-auto p-8 prose dark:prose-invert min-h-full">
+                    <ReactMarkdown>{content}</ReactMarkdown>
+                  </div>
+                </div>
+              )
+            ) : (
+              <Textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className="flex-1 w-full resize-none p-8 text-lg leading-relaxed bg-transparent border-0 focus-visible:ring-0 rounded-none font-mono px-8 md:px-[max(2rem,calc((100%-56rem)/2))] scrollbar-gutter-stable"
+                placeholder="Start writing..."
+                spellCheck={false}
+                autoFocus // Added autofocus for better UX when switching
+              />
             )
           ) : (
-            <Textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="flex-1 w-full resize-none p-8 text-lg leading-relaxed bg-transparent border-0 focus-visible:ring-0 rounded-none font-mono px-8 md:px-[max(2rem,calc((100%-56rem)/2))] scrollbar-gutter-stable"
-              placeholder="Start writing..."
-              spellCheck={false}
-              autoFocus // Added autofocus for better UX when switching
-            />
-          )
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <p>No entry selected.</p>
-            <Button variant="link" onClick={handleAddEntry}>
-              Create one?
-            </Button>
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+              <p>No entry selected.</p>
+              <Button variant="link" onClick={handleAddEntry}>
+                Create one?
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* AI Suggestion Sidebar */}
+        <div className="w-80 border-l bg-card/30 flex flex-col shrink-0">
+          <div className="p-4 border-b flex items-center justify-between bg-card/50">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              Intervention
+            </h3>
           </div>
-        )}
+          <div className="p-6 flex flex-col gap-6 overflow-y-auto">
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Need a starting point? Our AI can suggest a journaling prompt or a quick intervention based on your recent burnout trends.
+              </p>
+              <Button
+                className="w-full"
+                disabled={isGeneratingSuggestion}
+                onClick={async () => {
+                  setIsGeneratingSuggestion(true);
+                  try {
+                    const res = await getJournalingSuggestion(date);
+                    setSuggestion(res);
+                  } catch (e) {
+                    console.error(e);
+                  } finally {
+                    setIsGeneratingSuggestion(false);
+                  }
+                }}
+              >
+                {isGeneratingSuggestion ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  "Generate Suggestion"
+                )}
+              </Button>
+            </div>
+
+            {suggestion && (
+              <div className="bg-primary/5 border border-primary/10 rounded-lg p-4 animate-in fade-in zoom-in duration-500">
+                <p className="text-sm font-medium leading-relaxed italic text-foreground/90">
+                  &quot;{suggestion}&quot;
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
