@@ -320,47 +320,130 @@ export async function analyzeAllUnanalyzedJournals(): Promise<{
   return { analyzed, skipped, errors };
 }
 
-export async function getJournalingSuggestion(date: string) {
+// Questions mapped to MBI sections (mirrors quiz-stats.ts)
+const EE_INDICES = [0, 1, 2, 3, 4, 5, 6];
+const DP_INDICES = [7, 8, 9, 10, 11, 12, 13];
+const PA_INDICES = [14, 15, 16, 17, 18, 19, 20, 21];
+
+function sectionWellbeing(
+  responses: Record<string, number>,
+  indices: number[],
+  invert: boolean,
+): number | null {
+  const values = indices
+    .map((i) => responses[String(i)])
+    .filter((v) => typeof v === "number" && v >= 0 && v <= 3) as number[];
+  if (values.length === 0) return null;
+  const avg = values.reduce((s, v) => s + v, 0) / values.length;
+  return Math.round(invert ? ((3 - avg) / 3) * 100 : (avg / 3) * 100);
+}
+
+// "expressive" = process emotions/experiences (best for high EE or DP)
+// "positive"   = gratitude/accomplishment focus (best for low PA)
+type JournalType = "expressive" | "positive";
+
+function determineJournalType(
+  bri: number | null,
+  eeScore: number | null,
+  dpScore: number | null,
+  paScore: number | null,
+): JournalType {
+  // No quiz data — fall back to BRI alone
+  if (eeScore === null && dpScore === null && paScore === null) {
+    return bri !== null && bri > 50 ? "expressive" : "positive";
+  }
+
+  // Scores are now burnout indices (higher = worse) — use directly
+  const eeBurnout = eeScore ?? 0;
+  const dpBurnout = dpScore ?? 0;
+  const paBurnout = paScore ?? 0;
+
+  // If low personal accomplishment is the dominant dimension → positive writing
+  // (rebuilds self-efficacy and counteracts imposter syndrome)
+  if (paBurnout >= eeBurnout && paBurnout >= dpBurnout) {
+    return "positive";
+  }
+
+  // EE or DP is dominant → expressive writing to process emotional burden
+  return "expressive";
+}
+
+export async function getJournalingSuggestion(date: string): Promise<string> {
   const uid = await getAuthenticatedUserId();
   const db = getAdminFirestore();
 
-  // 1. Fetch recent burnout data for context (BRI, etc.)
-  const journalRef = db.doc(`users/${uid}/journals/${date}`);
-  const journalSnap = await journalRef.get();
-  const journalData = journalSnap.data();
+  // 1. Fetch BRI from today's journal document
+  const journalSnap = await db.doc(`users/${uid}/journals/${date}`).get();
+  const bri: number | null =
+    typeof journalSnap.data()?.bri === "number"
+      ? (journalSnap.data()!.bri as number)
+      : null;
 
-  // 2. Fetch the current entry content if any
-  const entriesSnap = await journalRef
-    .collection("entries")
-    .orderBy("createdAt", "asc")
+  // 2. Fetch the most recent quiz and compute section wellbeing scores
+  const quizSnap = await db
+    .collection(`users/${uid}/quizzes`)
+    .orderBy("completedAt", "desc")
+    .limit(1)
     .get();
-  const currentContent = entriesSnap.docs
-    .map((doc) => doc.data().content)
-    .join("\n\n");
 
-  // 3. Initialize Gemini
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  let eeScore: number | null = null;
+  let dpScore: number | null = null;
+  let paScore: number | null = null;
 
-  const prompt = `
-    You are a compassionate mental health assistant specializing in occupational burnout.
-    The user is journaling for the date: ${date}.
-    
-    Current Burnout Risk Index (BRI): ${journalData?.bri || "Unknown"}
-    Current journal content so far:
-    "${currentContent}"
+  if (!quizSnap.empty) {
+    const responses = quizSnap.docs[0].data().responses as Record<string, number>;
+    eeScore = sectionWellbeing(responses, EE_INDICES, true);
+    dpScore = sectionWellbeing(responses, DP_INDICES, true);
+    paScore = sectionWellbeing(responses, PA_INDICES, false);
+  }
 
-    Based on the principles of CBT, ACT, and Mindfulness, provide a single, short, and highly effective journaling prompt or intervention (like a breathing exercise or a cognitive reframing task) to help the user.
-    
-    Keep it under 3 sentences. Be direct but empathetic.
-  `;
+  // 3. Determine journaling type from burnout profile
+  const journalType = determineJournalType(bri, eeScore, dpScore, paScore);
+
+  const typeDescription =
+    journalType === "expressive"
+      ? "expressive writing — guiding the person to openly process their feelings, stressors, and experiences without judgment"
+      : "positive writing — guiding the person to reflect on moments of competence, achievement, or sources of meaning and gratitude";
+
+  // 4. Build context string for the model
+  const scoreLines = [
+    bri !== null ? `- Journal Burnout Risk Index (BRI, 0–100, higher = more burnout): ${Math.round(bri)}` : null,
+    eeScore !== null ? `- Emotional Exhaustion burnout index (0–100, higher = more burnout): ${eeScore}` : null,
+    dpScore !== null ? `- Depersonalization burnout index (0–100, higher = more burnout): ${dpScore}` : null,
+    paScore !== null ? `- Reduced Personal Accomplishment burnout index (0–100, higher = more burnout): ${paScore}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const modelPrompt = `You are a compassionate burnout support assistant helping someone journal today (${date}).
+
+Their current burnout profile:
+${scoreLines || "No burnout data available yet."}
+
+Based on this profile, the recommended journaling approach is: ${typeDescription}.
+
+Write a single journaling prompt for this person. The prompt should:
+- Be 2–3 sentences maximum
+- Be warm, specific, and non-clinical
+- Directly invite them to start writing (not instruct them to do something first)
+- Reflect the selected journaling approach
+
+Respond with only the prompt itself — no preamble, no labels.`;
+
+  // 5. Generate with Gemini
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.error("GEMINI_API_KEY is not set");
+    return "Take a moment to write about what's been weighing on you most today — there are no right answers, just your honest experience.";
+  }
 
   try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite-preview" });
+    const result = await model.generateContent(modelPrompt);
+    return result.response.text().trim();
   } catch (error) {
     console.error("Gemini API error:", error);
-    return "Take a deep breath. Focus on one thing you can control right now.";
+    return "Take a moment to write about what's been weighing on you most today — there are no right answers, just your honest experience.";
   }
 }

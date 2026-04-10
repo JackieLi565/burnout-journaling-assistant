@@ -12,6 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import BriChart from "@/components/statistics/BriChart";
+import { JournalBriPoint } from "@/app/actions/journal-bri";
+import { QuizDataPoint } from "@/app/actions/quiz-stats";
 
 export function JournalBriContent({
   points,
@@ -19,10 +21,10 @@ export function JournalBriContent({
   latestCumulativeBri,
   quizPoints,
 }: {
-  points: any[];
+  points: JournalBriPoint[];
   latestBri: number | null;
   latestCumulativeBri: number | null;
-  quizPoints: any[];
+  quizPoints: QuizDataPoint[];
 }) {
   // Determine the lowest wellbeing dimension from the latest quiz for INITIAL recommendation
   const getInitialMeditation = () => {
@@ -36,12 +38,12 @@ export function JournalBriContent({
         { id: "PA", score: latest.paScore },
       ];
 
-      const lowest = scores.reduce((prev, curr) =>
-        curr.score < prev.score ? curr : prev
+      const highest = scores.reduce((prev, curr) =>
+        curr.score > prev.score ? curr : prev
       );
 
-      if (lowest.score < 80) {
-        const match = meditationsData.find((m) => m.id === lowest.id);
+      if (highest.score > 20) {
+        const match = meditationsData.find((m) => m.id === highest.id);
         if (match) initial = match;
       }
     }

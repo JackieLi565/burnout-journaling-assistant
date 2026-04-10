@@ -29,8 +29,7 @@ async function QuizSection() {
         <div>
           <h3 className="text-lg font-semibold">Daily Quiz</h3>
           <p className="text-sm text-muted-foreground">
-            Wellbeing score from each check-in (0–100, higher = less burnout
-            indicators).
+            Burnout index from each check-in (0–100, higher = more burnout).
           </p>
         </div>
         {latestScore !== null && (

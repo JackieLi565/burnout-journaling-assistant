@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { format, parseISO } from "date-fns";
-import { Edit2, Eye, Settings2, Sparkles, Loader2 } from "lucide-react";
+import { Edit2, Eye, Settings2, Sparkles, Loader2, ChevronRight } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import {
   createJournalEntry,
@@ -42,6 +42,7 @@ export function JournalEditor({ date, initialEntries, today }: JournalEditorProp
   const [isVoicePanelOpen, setIsVoicePanelOpen] = useState(false);
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // State
   const [entries, setEntries] = useState<Entry[]>(initialEntries);
@@ -354,52 +355,64 @@ export function JournalEditor({ date, initialEntries, today }: JournalEditorProp
         </div>
 
         {/* AI Suggestion Sidebar */}
-        <div className="w-80 border-l bg-card/30 flex flex-col shrink-0">
-          <div className="p-4 border-b flex items-center justify-between bg-card/50">
-            <h3 className="font-semibold flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
-              Intervention
-            </h3>
-          </div>
-          <div className="p-6 flex flex-col gap-6 overflow-y-auto">
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Need a starting point? Our AI can suggest a journaling prompt or a quick intervention based on your recent burnout trends.
-              </p>
-              <Button
-                className="w-full"
-                disabled={isGeneratingSuggestion}
-                onClick={async () => {
-                  setIsGeneratingSuggestion(true);
-                  try {
-                    const res = await getJournalingSuggestion(date);
-                    setSuggestion(res);
-                  } catch (e) {
-                    console.error(e);
-                  } finally {
-                    setIsGeneratingSuggestion(false);
-                  }
-                }}
-              >
-                {isGeneratingSuggestion ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  "Generate Suggestion"
-                )}
-              </Button>
-            </div>
-
-            {suggestion && (
-              <div className="bg-primary/5 border border-primary/10 rounded-lg p-4 animate-in fade-in zoom-in duration-500">
-                <p className="text-sm font-medium leading-relaxed italic text-foreground/90">
-                  &quot;{suggestion}&quot;
-                </p>
-              </div>
+        <div className={`border-l bg-card/30 flex flex-col shrink-0 transition-all duration-300 ${isSidebarOpen ? "w-80" : "w-10"}`}>
+          <div
+            className="p-3 border-b flex items-center justify-between bg-card/50 cursor-pointer select-none"
+            onClick={() => setIsSidebarOpen((o) => !o)}
+          >
+            {isSidebarOpen && (
+              <h3 className="font-semibold flex items-center gap-2 text-sm">
+                <Sparkles className="w-4 h-4 text-primary shrink-0" />
+                Intervention
+              </h3>
             )}
+            <ChevronRight
+              className="w-4 h-4 text-muted-foreground shrink-0 ml-auto"
+              style={{ transform: isSidebarOpen ? "rotate(180deg)" : "none", transition: "transform 300ms" }}
+            />
           </div>
+
+          {isSidebarOpen && (
+            <div className="p-6 flex flex-col gap-6 overflow-y-auto">
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Need a starting point? Our AI can suggest a journaling prompt or a quick intervention based on your recent burnout trends.
+                </p>
+                <Button
+                  className="w-full"
+                  disabled={isGeneratingSuggestion}
+                  onClick={async () => {
+                    setIsGeneratingSuggestion(true);
+                    try {
+                      const res = await getJournalingSuggestion(date);
+                      setSuggestion(res);
+                    } catch (e) {
+                      console.error(e);
+                    } finally {
+                      setIsGeneratingSuggestion(false);
+                    }
+                  }}
+                >
+                  {isGeneratingSuggestion ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    "Generate Suggestion"
+                  )}
+                </Button>
+              </div>
+
+              {suggestion && (
+                <div className="bg-primary/5 border border-primary/10 rounded-lg p-4 animate-in fade-in zoom-in duration-500">
+                  <p className="text-sm font-medium leading-relaxed italic text-foreground/90">
+                    &quot;{suggestion}&quot;
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
