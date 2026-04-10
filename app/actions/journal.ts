@@ -348,23 +348,35 @@ function determineJournalType(
   dpScore: number | null,
   paScore: number | null,
 ): JournalType {
-  // No quiz data — fall back to BRI alone
-  if (eeScore === null && dpScore === null && paScore === null) {
-    return bri !== null && bri > 50 ? "expressive" : "positive";
+  // Today's journal BRI is usually null (the user hasn't written yet), so fall back to
+  // the quiz overall score (mean of the three normalized section scores) as the burnout signal.
+  const quizOverall =
+    eeScore !== null && dpScore !== null && paScore !== null
+      ? Math.round((eeScore + dpScore + paScore) / 3)
+      : null;
+  const overallBurnout = bri ?? quizOverall;
+
+  // High overall burnout → positive writing to avoid adding to emotional load / rumination
+  if (overallBurnout !== null && overallBurnout > 60) {
+    return "positive";
   }
 
-  // Scores are now burnout indices (higher = worse) — use directly
+  // No data at all → default to expressive
+  if (eeScore === null && dpScore === null && paScore === null) {
+    return "expressive";
+  }
+
+  // Moderate burnout: use dimensional profile
   const eeBurnout = eeScore ?? 0;
   const dpBurnout = dpScore ?? 0;
   const paBurnout = paScore ?? 0;
 
-  // If low personal accomplishment is the dominant dimension → positive writing
-  // (rebuilds self-efficacy and counteracts imposter syndrome)
+  // PA is the dominant burnout dimension → positive writing to rebuild self-efficacy
   if (paBurnout >= eeBurnout && paBurnout >= dpBurnout) {
     return "positive";
   }
 
-  // EE or DP is dominant → expressive writing to process emotional burden
+  // EE or DP dominant → expressive writing to process emotional burden
   return "expressive";
 }
 
@@ -402,8 +414,8 @@ export async function getJournalingSuggestion(date: string): Promise<string> {
 
   const typeDescription =
     journalType === "expressive"
-      ? "expressive writing — guiding the person to openly process their feelings, stressors, and experiences without judgment"
-      : "positive writing — guiding the person to reflect on moments of competence, achievement, or sources of meaning and gratitude";
+      ? "expressive writing — guiding the person to openly process their feelings, stressors, and experiences to release emotional burden"
+      : "positive writing — focusing on small wins, moments of competence, or gratitude to rebuild energy without triggering rumination on stressors";
 
   // 4. Build context string for the model
   const scoreLines = [
@@ -422,10 +434,16 @@ ${scoreLines || "No burnout data available yet."}
 
 Based on this profile, the recommended journaling approach is: ${typeDescription}.
 
+${
+  journalType === "positive"
+    ? "IMPORTANT: This user is at risk of exhaustion. DO NOT ask them to explore deep negative emotions or 'vent'. Instead, focus on 'Micro-Mastery' (small wins) or 'Positive Writing' (gratitude)."
+    : "Encourage 'Emotional Labeling' and narrative processing of their complex feelings or stressors."
+}
+
 Write a single journaling prompt for this person. The prompt should:
-- Be 2–3 sentences maximum
+- Be 2 sentences maximum
 - Be warm, specific, and non-clinical
-- Directly invite them to start writing (not instruct them to do something first)
+- Directly invite them to start writing
 - Reflect the selected journaling approach
 
 Respond with only the prompt itself — no preamble, no labels.`;
@@ -439,11 +457,14 @@ Respond with only the prompt itself — no preamble, no labels.`;
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite-preview" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
     const result = await model.generateContent(modelPrompt);
     return result.response.text().trim();
   } catch (error) {
     console.error("Gemini API error:", error);
-    return "Take a moment to write about what's been weighing on you most today — there are no right answers, just your honest experience.";
+    // Strategy-aware fallback if the API fails
+    return journalType === "positive"
+      ? "Take a moment to write about one small thing that went well today, no matter how tiny it might seem."
+      : "Take a moment to write about what's been on your mind today — there are no right answers, just your honest experience.";
   }
 }
