@@ -4,7 +4,7 @@
     "name": "Restorative Body Scan",
     "tagline": "A gentle body scan meditation focused on physical relaxation and releasing accumulated tension.",
     "instructions": [
-      { "timestamp": 0, "text": "Settle into a comfortable position and close your eyes." },
+      { "timestamp": 0, "text": "Settle into a comfortable position and take a soft gaze at the screen." },
       { "timestamp": 5, "text": "Take a deep, slow breath in... and exhale completely." },
       { "timestamp": 15, "text": "Bring your awareness to your feet. Feel them soften." },
       { "timestamp": 45, "text": "Scan up to your legs. Release any tension you find." },
@@ -39,7 +39,7 @@
       { "timestamp": 60, "text": "Think of one small thing you accomplished today." },
       { "timestamp": 120, "text": "Let that sense of accomplishment fill your awareness." },
       { "timestamp": 300, "text": "Stay present with your breath. You are here. You are enough." },
-      { "timestamp": 540, "text": "Slowly open your eyes when you're ready." }
+      { "timestamp": 540, "text": "Gently expand your field of vision when you're ready." }
     ]
   },
   {
