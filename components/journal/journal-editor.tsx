@@ -26,6 +26,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+
+import { VoiceJournalPanel } from "./voice-journal-panel";
+
 interface JournalEditorProps {
   date: string;
   initialEntries: Entry[];
@@ -35,6 +38,7 @@ interface JournalEditorProps {
 export function JournalEditor({ date, initialEntries, today }: JournalEditorProps) {
   const isToday = date === today;
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isVoicePanelOpen, setIsVoicePanelOpen] = useState(false);
 
   // State
   const [entries, setEntries] = useState<Entry[]>(initialEntries);
@@ -215,6 +219,14 @@ export function JournalEditor({ date, initialEntries, today }: JournalEditorProp
             </span>
           )}
 
+          <Button
+            variant={isVoicePanelOpen ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setIsVoicePanelOpen((open) => !open)}
+          >
+            Voice
+          </Button>
+
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -264,7 +276,7 @@ export function JournalEditor({ date, initialEntries, today }: JournalEditorProp
                     setIsAnalyzing(true);
                     try {
                       await analyzeAndSaveJournal(date, content);
-                    } catch (error) {
+                    } catch {
                     } finally {
                       setIsAnalyzing(false);
                     }
@@ -277,6 +289,24 @@ export function JournalEditor({ date, initialEntries, today }: JournalEditorProp
           </Popover>
         </div>
       </div>
+
+      {isVoicePanelOpen && (
+        <VoiceJournalPanel
+          date={date}
+          draft={content}
+          onAppendTranscript={(transcript) => {
+            const nextContent = content.trim()
+              ? `${content.trim()}\n\n${transcript.trim()}`
+              : transcript.trim();
+            setContent(nextContent);
+            setIsPreview(false);
+          }}
+          onReplaceDraft={(transcript) => {
+            setContent(transcript.trim());
+            setIsPreview(false);
+          }}
+        />
+      )}
 
       {/* Editor Content Area */}
       <div className="flex-1 overflow-hidden relative flex flex-col">

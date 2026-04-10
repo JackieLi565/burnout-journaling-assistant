@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config import settings
-from routers import users_router, journals_router
+from routers import users_router, journals_router, live_router
 
 app = FastAPI(
     title="Burnout Journaling Assistant API",
@@ -22,6 +22,7 @@ app.add_middleware(
 # Include routers
 app.include_router(users_router, prefix=settings.API_V1_PREFIX)
 app.include_router(journals_router, prefix=settings.API_V1_PREFIX)
+app.include_router(live_router, prefix=settings.API_V1_PREFIX)
 
 @app.get("/")
 async def root():
