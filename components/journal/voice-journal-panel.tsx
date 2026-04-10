@@ -17,8 +17,9 @@ import {
 type VoiceJournalPanelProps = {
   date: string;
   draft: string;
-  onAppendTranscript: (text: string) => void;
-  onReplaceDraft: (text: string) => void;
+  onAppendTranscript: (text: string, source: "dictation" | "live") => void;
+  onReplaceDraft: (text: string, source: "dictation" | "live") => void;
+  onLiveTranscriptChange?: (text: string) => void;
 };
 
 const STATUS_COPY: Record<string, string> = {
@@ -34,6 +35,7 @@ export function VoiceJournalPanel({
   draft,
   onAppendTranscript,
   onReplaceDraft,
+  onLiveTranscriptChange,
 }: VoiceJournalPanelProps) {
   const [mode, setMode] = useState<"dictation" | "live">("dictation");
   const dictation = useLiveJournal();
@@ -65,8 +67,14 @@ export function VoiceJournalPanel({
   } = activeSession;
   const handleStartSession = () =>
     mode === "live"
-      ? liveCoach.startSession({ date, draft })
+      ? (onLiveTranscriptChange?.(""), liveCoach.startSession({ date, draft }))
       : dictation.startSession();
+
+  useEffect(() => {
+    if (mode === "live" && inputTranscript.trim()) {
+      onLiveTranscriptChange?.(inputTranscript);
+    }
+  }, [inputTranscript, mode, onLiveTranscriptChange]);
 
   const statusTone = useMemo(() => {
     switch (status) {
@@ -160,7 +168,12 @@ export function VoiceJournalPanel({
 
           <Button
             variant="outline"
-            onClick={() => void resetSession()}
+            onClick={() => {
+              if (mode === "live") {
+                onLiveTranscriptChange?.("");
+              }
+              void resetSession();
+            }}
             className="gap-2"
           >
             <RefreshCw className="h-4 w-4" />
@@ -221,13 +234,13 @@ export function VoiceJournalPanel({
           <Button
             variant="outline"
             disabled={!canApplyTranscript}
-            onClick={() => onAppendTranscript(inputTranscript)}
+            onClick={() => onAppendTranscript(inputTranscript, mode)}
           >
             {mode === "live" ? "Append Conversation" : "Append Transcript"}
           </Button>
           <Button
             disabled={!canApplyTranscript}
-            onClick={() => onReplaceDraft(inputTranscript)}
+            onClick={() => onReplaceDraft(inputTranscript, mode)}
           >
             {mode === "live" ? "Replace With Conversation" : "Replace Draft"}
           </Button>

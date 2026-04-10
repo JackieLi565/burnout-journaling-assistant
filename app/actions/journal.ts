@@ -169,8 +169,11 @@ export async function deleteJournalEntry(date: string, entryId: string) {
 }
 
 export interface BurnoutAnalysisResult {
+  base_score?: number;
   overall_score: number;
   cumulative_bri?: number | null;
+  coach_modifier?: number;
+  coach_used?: boolean;
   risk_level?: string;
   [key: string]: any;
 }
@@ -178,6 +181,10 @@ export interface BurnoutAnalysisResult {
 export async function analyzeAndSaveJournal(
   date: string,
   text: string,
+  options?: {
+    coachTranscript?: string;
+    coachTranscriptEmbedded?: boolean;
+  },
 ): Promise<BurnoutAnalysisResult> {
   const uid = await getAuthenticatedUserId();
   const db = getAdminFirestore();
@@ -193,6 +200,8 @@ export async function analyzeAndSaveJournal(
         user_id: uid,
         journal_date: date,
         texts,
+        coach_transcript: options?.coachTranscript?.trim() || undefined,
+        coach_transcript_embedded: Boolean(options?.coachTranscriptEmbedded),
       }),
       cache: "no-store",
     },
@@ -205,27 +214,45 @@ export async function analyzeAndSaveJournal(
 
   const data = (await response.json()) as BurnoutAnalysisResult;
 
+  const baseBriRaw = data.base_score;
+  const baseBri =
+    baseBriRaw === undefined || baseBriRaw === null
+      ? null
+      : Number(baseBriRaw);
   const bri = Number(data.overall_score);
   const cumulativeBriRaw = data.cumulative_bri;
   const cumulativeBri =
     cumulativeBriRaw === undefined || cumulativeBriRaw === null
       ? null
       : Number(cumulativeBriRaw);
+  const coachModifierRaw = data.coach_modifier;
+  const coachModifier =
+    coachModifierRaw === undefined || coachModifierRaw === null
+      ? null
+      : Number(coachModifierRaw);
 
   const journalRef = db.doc(`users/${uid}/journals/${date}`);
   await journalRef.set(
     {
+      baseBri:
+        baseBri === null || !Number.isFinite(baseBri) ? null : baseBri,
       bri: Number.isFinite(bri) ? bri : null,
       cumulativeBri:
         cumulativeBri === null || !Number.isFinite(cumulativeBri)
           ? null
           : cumulativeBri,
+      coachModifier:
+        coachModifier === null || !Number.isFinite(coachModifier)
+          ? null
+          : coachModifier,
+      coachUsed: Boolean(data.coach_used),
       briUpdatedAt: Timestamp.now(),
     },
     { merge: true },
   );
 
   revalidatePath(`/app/${date}`);
+  revalidatePath("/app/statistics");
   return data;
 }
 
@@ -289,20 +316,37 @@ export async function analyzeAllUnanalyzedJournals(): Promise<{
       }
 
       const data = (await response.json()) as BurnoutAnalysisResult;
+      const baseBriRaw = data.base_score;
+      const baseBri =
+        baseBriRaw === undefined || baseBriRaw === null
+          ? null
+          : Number(baseBriRaw);
       const bri = Number(data.overall_score);
       const cumulativeBriRaw = data.cumulative_bri;
       const cumulativeBri =
         cumulativeBriRaw === undefined || cumulativeBriRaw === null
           ? null
           : Number(cumulativeBriRaw);
+      const coachModifierRaw = data.coach_modifier;
+      const coachModifier =
+        coachModifierRaw === undefined || coachModifierRaw === null
+          ? null
+          : Number(coachModifierRaw);
 
       await db.doc(`users/${uid}/journals/${date}`).set(
         {
+          baseBri:
+            baseBri === null || !Number.isFinite(baseBri) ? null : baseBri,
           bri: Number.isFinite(bri) ? bri : null,
           cumulativeBri:
             cumulativeBri === null || !Number.isFinite(cumulativeBri)
               ? null
               : cumulativeBri,
+          coachModifier:
+            coachModifier === null || !Number.isFinite(coachModifier)
+              ? null
+              : coachModifier,
+          coachUsed: Boolean(data.coach_used),
           briUpdatedAt: Timestamp.now(),
         },
         { merge: true },

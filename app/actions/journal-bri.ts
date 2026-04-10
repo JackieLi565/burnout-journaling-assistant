@@ -1,19 +1,23 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { db } from "@/lib/firebase-admin";
 import { getAuthenticatedUserId } from "./auth";
 
 export type JournalBriPoint = {
   date: string;
+  baseBri: number | null;
   bri: number | null;
   cumulativeBri: number | null;
+  coachModifier: number | null;
+  coachUsed: boolean;
 };
 
 export type JournalBriSummary = {
   points: JournalBriPoint[];
+  latestBaseBri: number | null;
   latestBri: number | null;
   latestCumulativeBri: number | null;
+  latestCoachModifier: number | null;
 };
 
 export async function getJournalBriSummary(): Promise<JournalBriSummary> {
@@ -31,9 +35,13 @@ export async function getJournalBriSummary(): Promise<JournalBriSummary> {
       const data = doc.data() || {};
       return {
         date: doc.id,
+        baseBri: typeof data.baseBri === "number" ? data.baseBri : null,
         bri: typeof data.bri === "number" ? data.bri : null,
         cumulativeBri:
           typeof data.cumulativeBri === "number" ? data.cumulativeBri : null,
+        coachModifier:
+          typeof data.coachModifier === "number" ? data.coachModifier : null,
+        coachUsed: data.coachUsed === true,
       };
     });
 
@@ -44,11 +52,19 @@ export async function getJournalBriSummary(): Promise<JournalBriSummary> {
 
     return {
       points,
+      latestBaseBri: latest?.baseBri ?? null,
       latestBri: latest?.bri ?? null,
       latestCumulativeBri: latest?.cumulativeBri ?? null,
+      latestCoachModifier: latest?.coachModifier ?? null,
     };
   } catch (error) {
     console.error("Failed to fetch journal BRI summary:", error);
-    return { points: [], latestBri: null, latestCumulativeBri: null };
+    return {
+      points: [],
+      latestBaseBri: null,
+      latestBri: null,
+      latestCumulativeBri: null,
+      latestCoachModifier: null,
+    };
   }
 }

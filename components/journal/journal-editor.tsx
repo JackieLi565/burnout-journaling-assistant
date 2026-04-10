@@ -39,6 +39,8 @@ export function JournalEditor({ date, initialEntries, today }: JournalEditorProp
   const isToday = date === today;
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isVoicePanelOpen, setIsVoicePanelOpen] = useState(false);
+  const [coachTranscript, setCoachTranscript] = useState("");
+  const [coachTranscriptEmbedded, setCoachTranscriptEmbedded] = useState(false);
 
   // State
   const [entries, setEntries] = useState<Entry[]>(initialEntries);
@@ -275,7 +277,10 @@ export function JournalEditor({ date, initialEntries, today }: JournalEditorProp
                   onClick={async () => {
                     setIsAnalyzing(true);
                     try {
-                      await analyzeAndSaveJournal(date, content);
+                      await analyzeAndSaveJournal(date, content, {
+                        coachTranscript,
+                        coachTranscriptEmbedded,
+                      });
                     } catch {
                     } finally {
                       setIsAnalyzing(false);
@@ -294,15 +299,30 @@ export function JournalEditor({ date, initialEntries, today }: JournalEditorProp
         <VoiceJournalPanel
           date={date}
           draft={content}
-          onAppendTranscript={(transcript) => {
+          onLiveTranscriptChange={(transcript) => {
+            const nextTranscript = transcript.trim();
+            setCoachTranscript(nextTranscript);
+            setCoachTranscriptEmbedded(false);
+          }}
+          onAppendTranscript={(transcript, source) => {
+            const nextTranscript = transcript.trim();
             const nextContent = content.trim()
-              ? `${content.trim()}\n\n${transcript.trim()}`
-              : transcript.trim();
+              ? `${content.trim()}\n\n${nextTranscript}`
+              : nextTranscript;
             setContent(nextContent);
+            if (source === "live") {
+              setCoachTranscript(nextTranscript);
+              setCoachTranscriptEmbedded(true);
+            }
             setIsPreview(false);
           }}
-          onReplaceDraft={(transcript) => {
-            setContent(transcript.trim());
+          onReplaceDraft={(transcript, source) => {
+            const nextTranscript = transcript.trim();
+            setContent(nextTranscript);
+            if (source === "live") {
+              setCoachTranscript(nextTranscript);
+              setCoachTranscriptEmbedded(true);
+            }
             setIsPreview(false);
           }}
         />

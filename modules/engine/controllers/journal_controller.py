@@ -204,6 +204,8 @@ class JournalController:
         user_id: Optional[str],
         journal_date: Optional[str],
         texts: List[str],
+        coach_transcript: Optional[str] = None,
+        coach_transcript_embedded: bool = False,
     ) -> BurnoutRiskIndex:
         """
         Analyze one or more journal input texts and compute cumulative BRI.
@@ -212,7 +214,12 @@ class JournalController:
         but this accepts a list to keep the API flexible.
         """
         analysis_service = BurnoutAnalysisService(api_key=settings.GEMINI_API_KEY)
-        result = analysis_service.analyze_journal_inputs(texts)
+        combined = "\n\n---\n\n".join([t for t in texts if (t or "").strip()])
+        result = analysis_service.analyze(
+            combined,
+            coach_transcript=coach_transcript,
+            coach_transcript_embedded=coach_transcript_embedded,
+        )
 
         if not user_id or not journal_date:
             return result

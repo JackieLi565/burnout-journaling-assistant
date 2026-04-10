@@ -1,6 +1,7 @@
 """Burnout risk analysis service using LangExtract."""
 from __future__ import annotations
 
+import re
 from typing import List, Dict, Optional, Sequence
 
 try:
@@ -17,6 +18,27 @@ from models.burnout import (
     EmotionType,
 )
 from services.preprocessing import preprocess_text
+
+PROTECTIVE_TERMS = (
+    "rest",
+    "rested",
+    "recover",
+    "recovering",
+    "support",
+    "supported",
+    "therapy",
+    "friend",
+    "family",
+    "break",
+    "vacation",
+    "sleep",
+    "manageable",
+    "better",
+    "hopeful",
+    "proud",
+    "grateful",
+    "calm",
+)
 
 
 class BurnoutAnalysisService:
@@ -295,8 +317,113 @@ class BurnoutAnalysisService:
         # overall = overall_base * length_factor
 
         return float(max(0.0, min(100.0, overall_base)))
-    
-    def analyze(self, text: str) -> BurnoutRiskIndex:
+
+    def _extract_user_turns(self, coach_transcript: str) -> str:
+        """Keep only user-authored turns from the live coach transcript."""
+        user_turns: List[str] = []
+
+        for raw_line in coach_transcript.splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+
+            lower = line.lower()
+            if lower.startswith("you:"):
+                content = line.split(":", 1)[1].strip()
+                if content:
+                    user_turns.append(content)
+                continue
+
+            if lower.startswith("coach:"):
+                continue
+
+            user_turns.append(line)
+
+        return "\n".join(user_turns).strip()
+
+    def _compute_coach_modifier(
+        self,
+        *,
+        base_score: float,
+        coach_transcript: Optional[str],
+        coach_transcript_embedded: bool,
+    ) -> tuple[float, bool]:
+        """
+        Compute a small optional modifier from the live coach conversation.
+
+        The modifier is intended to refine the BRI when the coach elicits extra
+        burnout-related context that was not captured in the written journal.
+        """
+        if coach_transcript_embedded:
+            return 0.0, False
+
+        if not coach_transcript or not coach_transcript.strip():
+            return 0.0, False
+
+        user_text = self._extract_user_turns(coach_transcript)
+        if not user_text:
+            return 0.0, False
+
+        cleaned_text, _sentences = preprocess_text(user_text)
+        if not cleaned_text:
+            return 0.0, False
+
+        coach_features = self._extract_features_with_langextract(cleaned_text, [cleaned_text])
+        if not coach_features:
+            return 0.0, False
+
+        coach_scores = self._calculate_mbi_scores(
+            coach_features,
+            cleaned_text,
+            len(cleaned_text),
+        )
+        coach_base = self._calculate_overall_score(coach_scores, len(cleaned_text))
+
+        disclosure_bonus = max(0.0, min(6.0, (coach_base - base_score) * 0.25))
+
+        high_risk_feature_count = sum(
+            1
+            for feature in coach_features
+            if feature.stress_level >= 0.6
+            or feature.cynical_thoughts
+            or feature.ee_score >= 60.0
+            or feature.dp_score >= 50.0
+            or feature.pa_score >= 50.0
+        )
+
+        if high_risk_feature_count >= 2:
+            consistency_bonus = 2.0
+        elif high_risk_feature_count == 1:
+            consistency_bonus = 1.0
+        else:
+            consistency_bonus = 0.0
+
+        positive_count = sum(
+            1 for feature in coach_features if feature.emotion_type == EmotionType.POSITIVE
+        )
+        protective_hits = sum(
+            1
+            for term in PROTECTIVE_TERMS
+            if re.search(rf"\b{re.escape(term)}\b", cleaned_text, flags=re.IGNORECASE)
+        )
+        protective_offset = min(5.0, (positive_count * 1.0) + (protective_hits * 0.75))
+
+        modifier = disclosure_bonus + consistency_bonus - protective_offset
+        # Keep the coach strictly as a refinement layer, not a competing score.
+        absolute_cap = 5.0
+        relative_cap = max(2.0, min(5.0, base_score * 0.10))
+        cap = min(absolute_cap, relative_cap)
+        modifier = max(-3.0, min(cap, modifier))
+
+        return float(modifier), True
+
+    def analyze(
+        self,
+        text: str,
+        *,
+        coach_transcript: Optional[str] = None,
+        coach_transcript_embedded: bool = False,
+    ) -> BurnoutRiskIndex:
         """
         Analyze text for burnout risk.
         
@@ -320,7 +447,13 @@ class BurnoutAnalysisService:
         # Step 3: Calculate MBI scores using LangExtract-provided dimension scores
         mbi_scores = self._calculate_mbi_scores(features, cleaned_text, text_length)
         # Step 4: Calculate overall BRI from MBI dimension scores
-        overall_score = self._calculate_overall_score(mbi_scores, text_length)
+        base_score = self._calculate_overall_score(mbi_scores, text_length)
+        coach_modifier, coach_used = self._compute_coach_modifier(
+            base_score=base_score,
+            coach_transcript=coach_transcript,
+            coach_transcript_embedded=coach_transcript_embedded,
+        )
+        overall_score = float(max(0.0, min(100.0, base_score + coach_modifier)))
         # Step 5: Determine risk level
         if overall_score < 25:
             risk_level = "low"
@@ -333,7 +466,10 @@ class BurnoutAnalysisService:
         
         # Create result
         result = BurnoutRiskIndex(
+            base_score=base_score,
             overall_score=overall_score,
+            coach_modifier=coach_modifier,
+            coach_used=coach_used,
             emotional_exhaustion=mbi_scores[MBIDimension.EMOTIONAL_EXHAUSTION],
             depersonalization=mbi_scores[MBIDimension.DEPERSONALIZATION],
             personal_accomplishment=mbi_scores[MBIDimension.PERSONAL_ACCOMPLISHMENT],

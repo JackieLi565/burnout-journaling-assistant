@@ -85,7 +85,13 @@ async function HrvStatsSection() {
 }
 
 async function JournalBriSection() {
-  const { points, latestBri, latestCumulativeBri } =
+  const {
+    points,
+    latestBaseBri,
+    latestBri,
+    latestCumulativeBri,
+    latestCoachModifier,
+  } =
     await getJournalBriSummary();
 
   if (points.length === 0) {
@@ -112,17 +118,25 @@ async function JournalBriSection() {
         </div>
         <div className="flex gap-6 shrink-0">
           <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              Latest BRI
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Latest base BRI</p>
+            <p className="text-2xl font-semibold">
+              {latestBaseBri !== null ? Math.round(latestBaseBri) : "–"}
             </p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Latest BRI</p>
             <p className="text-2xl font-semibold">
               {latestBri !== null ? Math.round(latestBri) : "–"}
             </p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              Latest cumulative BRI
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Latest coach modifier</p>
+            <p className="text-2xl font-semibold">
+              {latestCoachModifier !== null ? latestCoachModifier.toFixed(1) : "–"}
             </p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Latest cumulative BRI</p>
             <p className="text-2xl font-semibold">
               {latestCumulativeBri !== null
                 ? Math.round(latestCumulativeBri)
@@ -154,9 +168,27 @@ async function JournalBriSection() {
                   <span className="font-mono text-xs">{p.date}</span>
                   <div className="flex items-center gap-3">
                     <span className="text-xs">
+                      Base:{" "}
+                      {p.baseBri !== null ? (
+                        Math.round(p.baseBri)
+                      ) : (
+                        <span className="text-muted-foreground">n/a</span>
+                      )}
+                    </span>
+                    <span className="text-xs">
                       BRI:{" "}
                       {p.bri !== null ? (
                         Math.round(p.bri)
+                      ) : (
+                        <span className="text-muted-foreground">n/a</span>
+                      )}
+                    </span>
+                    <span className="text-xs">
+                      Coach:{" "}
+                      {p.coachModifier !== null ? (
+                        p.coachModifier.toFixed(1)
+                      ) : p.coachUsed ? (
+                        "0.0"
                       ) : (
                         <span className="text-muted-foreground">n/a</span>
                       )}

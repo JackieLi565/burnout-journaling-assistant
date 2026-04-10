@@ -30,6 +30,7 @@ export default function BriChart({ points }: BriChartProps) {
 
     const data = analyzed.map((p) => ({
         date: p.date,
+        "Base BRI": p.baseBri !== null ? Math.round(p.baseBri) : null,
         BRI: p.bri !== null ? Math.round(p.bri) : null,
         "Cumul. BRI": p.cumulativeBri !== null ? Math.round(p.cumulativeBri) : null,
     }));
@@ -66,6 +67,16 @@ export default function BriChart({ points }: BriChartProps) {
                         }}
                     />
                     <Legend verticalAlign="top" height={32} iconType="circle" />
+                    <Line
+                        type="monotone"
+                        dataKey="Base BRI"
+                        stroke="#64748b"
+                        strokeWidth={2}
+                        strokeDasharray="4 3"
+                        dot={{ r: 2, fill: "#64748b", strokeWidth: 0 }}
+                        activeDot={{ r: 4 }}
+                        connectNulls
+                    />
                     <Line
                         type="monotone"
                         dataKey="BRI"

@@ -54,8 +54,24 @@ class MBIScore(BaseModel):
 
 class BurnoutRiskIndex(BaseModel):
     """Burnout risk index result."""
+    base_score: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=100.0,
+        description="Base burnout risk score before optional coach modifiers (0-100)",
+    )
     overall_score: float = Field(ge=0.0, le=100.0, description="Overall burnout risk score (0-100)")
     cumulative_bri: Optional[float] = Field(default=None, ge=0.0, le=100.0, description="Cumulative burnout risk index (0-100)")
+    coach_modifier: float = Field(
+        default=0.0,
+        ge=-3.0,
+        le=5.0,
+        description="Optional modifier derived from live coach transcript context",
+    )
+    coach_used: bool = Field(
+        default=False,
+        description="Whether a separate live coach transcript contributed to the final score",
+    )
     emotional_exhaustion: MBIScore
     depersonalization: MBIScore
     personal_accomplishment: MBIScore
@@ -82,3 +98,11 @@ class AnalysisRequest(BaseModel):
     texts: Optional[List[str]] = Field(default=None, description="Optional list of journal input texts to analyze together")
     user_id: Optional[str] = Field(default=None, description="Optional user ID (for cumulative BRI calculation)")
     journal_date: Optional[str] = Field(default=None, description="Optional journal date (yyyy-mm-dd) for cumulative BRI calculation")
+    coach_transcript: Optional[str] = Field(
+        default=None,
+        description="Optional live coach conversation transcript used as a context modifier",
+    )
+    coach_transcript_embedded: bool = Field(
+        default=False,
+        description="Whether the coach transcript is already embedded in the journal text",
+    )

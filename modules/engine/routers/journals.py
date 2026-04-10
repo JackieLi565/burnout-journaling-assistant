@@ -83,6 +83,8 @@ async def analyze_journal(request: AnalysisRequest):
                 user_id=request.user_id,
                 journal_date=request.journal_date,
                 texts=request.texts,
+                coach_transcript=request.coach_transcript,
+                coach_transcript_embedded=request.coach_transcript_embedded,
             )
         elif request.text:
             # Analyze provided text directly (no cumulative)
