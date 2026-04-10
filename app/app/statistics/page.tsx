@@ -1,10 +1,68 @@
 import { Suspense } from "react";
 import { getHrvStats } from "@/app/actions/hrv";
 import { getJournalBriSummary } from "@/app/actions/journal-bri";
+import { getQuizStats } from "@/app/actions/quiz-stats";
 import HrvChart from "@/components/statistics/HrvChart";
 import BriChart from "@/components/statistics/BriChart";
+import QuizChart from "@/components/statistics/QuizChart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AnalyzeAllButton } from "@/components/statistics/analyze-all-button";
+
+async function QuizSection() {
+  const { points, latestScore } = await getQuizStats();
+
+  if (points.length === 0) {
+    return (
+      <div className="p-6 rounded-xl border bg-card/50">
+        <h3 className="text-lg font-semibold mb-2">Daily Quiz</h3>
+        <p className="text-sm text-muted-foreground">
+          No quiz results yet. Complete a Daily Check-in to see your scores here.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 rounded-xl border bg-card/50 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-4">
+        <div>
+          <h3 className="text-lg font-semibold">Daily Quiz</h3>
+          <p className="text-sm text-muted-foreground">
+            Wellbeing score from each check-in (0–100, higher = less burnout indicators).
+          </p>
+        </div>
+        {latestScore !== null && (
+          <div className="shrink-0">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Latest score</p>
+            <p className="text-2xl font-semibold">{latestScore}</p>
+          </div>
+        )}
+      </div>
+
+      <div className="border-t pt-4 grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-6">
+        <QuizChart points={points} />
+
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">All scores</p>
+          <div className="flex flex-col gap-1 max-h-[260px] overflow-y-auto text-sm">
+            {points
+              .slice()
+              .reverse()
+              .map((p) => (
+                <div
+                  key={p.date}
+                  className="flex items-center justify-between rounded-md px-2 py-1 hover:bg-muted/60"
+                >
+                  <span className="font-mono text-xs">{p.date}</span>
+                  <span className="text-xs font-medium">{p.score}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 async function HrvStatsSection() {
   const { data, error } = await getHrvStats();
@@ -128,6 +186,14 @@ export default function StatisticsPage() {
           >
             {/* This section shows journal BRI history and the latest cumulative BRI */}
             <JournalBriSection />
+          </Suspense>
+        </div>
+
+        <div className="grid gap-6">
+          <Suspense
+            fallback={<Skeleton className="w-full h-[220px] rounded-xl" />}
+          >
+            <QuizSection />
           </Suspense>
         </div>
 
