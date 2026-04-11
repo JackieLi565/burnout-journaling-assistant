@@ -64,9 +64,21 @@ my_commits.txt
 export_my_commits.py
 outstanding_issues.md
 
-# claude code
+# course report PDFs (unrelated to app)
+*.pdf
+
+# generated demo profile data (ephemeral output)
+example_profiles/*.json
+
+# one-off generation / utility scripts
+example_profiles/generate_journals.ts
+scripts/rebalance-demo-scores.ts
+
+# claude code / ai agent config
 .claude/
 materials/CLAUDE.md
+materials/GEMINI.md
+materials/AGENTS.md
 materials/settings.local.json
 
 # firebase
