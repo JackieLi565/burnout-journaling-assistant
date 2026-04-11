@@ -3,10 +3,10 @@ import { getHrvStats } from "@/app/actions/hrv";
 import { getJournalBriSummary } from "@/app/actions/journal-bri";
 import { getQuizStats } from "@/app/actions/quiz-stats";
 import HrvChart from "@/components/statistics/HrvChart";
-import BriChart from "@/components/statistics/BriChart";
 import QuizChart from "@/components/statistics/QuizChart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AnalyzeAllButton } from "@/components/statistics/analyze-all-button";
+import { JournalBriContent } from "@/components/statistics/JournalBriContent";
 
 async function QuizSection() {
   const { points, latestScore } = await getQuizStats();
@@ -29,8 +29,7 @@ async function QuizSection() {
         <div>
           <h3 className="text-lg font-semibold">Daily Quiz</h3>
           <p className="text-sm text-muted-foreground">
-            Wellbeing score from each check-in (0–100, higher = less burnout
-            indicators).
+            Burnout index from each check-in (0–100, higher = more burnout).
           </p>
         </div>
         {latestScore !== null && (
@@ -43,28 +42,8 @@ async function QuizSection() {
         )}
       </div>
 
-      <div className="border-t pt-4 grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-6">
+      <div className="border-t pt-4">
         <QuizChart points={points} />
-
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">
-            All scores
-          </p>
-          <div className="flex flex-col gap-1 max-h-[260px] overflow-y-auto text-sm">
-            {points
-              .slice()
-              .reverse()
-              .map((p) => (
-                <div
-                  key={p.date}
-                  className="flex items-center justify-between rounded-md px-2 py-1 hover:bg-muted/60"
-                >
-                  <span className="font-mono text-xs">{p.date}</span>
-                  <span className="text-xs font-medium">{p.score}</span>
-                </div>
-              ))}
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -85,129 +64,28 @@ async function HrvStatsSection() {
 }
 
 async function JournalBriSection() {
-  const {
-    points,
-    latestBaseBri,
-    latestBri,
-    latestCumulativeBri,
-    latestCoachModifier,
-  } =
-    await getJournalBriSummary();
+  const [{ points, latestBri, latestCumulativeBri }, { points: quizPoints }] =
+    await Promise.all([getJournalBriSummary(), getQuizStats()]);
 
   if (points.length === 0) {
     return (
       <div className="p-6 rounded-xl border bg-card/50">
         <h3 className="text-lg font-semibold mb-2">Journal Burnout Risk</h3>
         <p className="text-sm text-muted-foreground">
-          No analyzed journals yet. Use the &quot;Analyze All Journals&quot;
-          button above to generate scores.
+          No analyzed journals yet. Use the &quot;Analyze All Journals&quot; button
+          above to generate scores.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="p-6 rounded-xl border bg-card/50 space-y-4">
-      {/* Header row */}
-      <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-semibold">Journal Burnout Risk</h3>
-          <p className="text-sm text-muted-foreground">
-            Scores from analyzing your journal entries with the burnout engine.
-          </p>
-        </div>
-        <div className="flex gap-6 shrink-0">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Latest base BRI</p>
-            <p className="text-2xl font-semibold">
-              {latestBaseBri !== null ? Math.round(latestBaseBri) : "–"}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Latest BRI</p>
-            <p className="text-2xl font-semibold">
-              {latestBri !== null ? Math.round(latestBri) : "–"}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Latest coach modifier</p>
-            <p className="text-2xl font-semibold">
-              {latestCoachModifier !== null ? latestCoachModifier.toFixed(1) : "–"}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Latest cumulative BRI</p>
-            <p className="text-2xl font-semibold">
-              {latestCumulativeBri !== null
-                ? Math.round(latestCumulativeBri)
-                : "–"}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Chart + List side by side */}
-      <div className="border-t pt-4 grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-6">
-        {/* Chart */}
-        <BriChart points={points} />
-
-        {/* Score list */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">
-            All scores
-          </p>
-          <div className="flex flex-col gap-1 max-h-[280px] overflow-y-auto text-sm">
-            {points
-              .slice()
-              .reverse()
-              .map((p) => (
-                <div
-                  key={p.date}
-                  className="flex items-center justify-between rounded-md px-2 py-1 hover:bg-muted/60"
-                >
-                  <span className="font-mono text-xs">{p.date}</span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs">
-                      Base:{" "}
-                      {p.baseBri !== null ? (
-                        Math.round(p.baseBri)
-                      ) : (
-                        <span className="text-muted-foreground">n/a</span>
-                      )}
-                    </span>
-                    <span className="text-xs">
-                      BRI:{" "}
-                      {p.bri !== null ? (
-                        Math.round(p.bri)
-                      ) : (
-                        <span className="text-muted-foreground">n/a</span>
-                      )}
-                    </span>
-                    <span className="text-xs">
-                      Coach:{" "}
-                      {p.coachModifier !== null ? (
-                        p.coachModifier.toFixed(1)
-                      ) : p.coachUsed ? (
-                        "0.0"
-                      ) : (
-                        <span className="text-muted-foreground">n/a</span>
-                      )}
-                    </span>
-                    <span className="text-xs">
-                      Cumul:{" "}
-                      {p.cumulativeBri !== null ? (
-                        Math.round(p.cumulativeBri)
-                      ) : (
-                        <span className="text-muted-foreground">n/a</span>
-                      )}
-                    </span>
-                  </div>
-                </div>
-              ))}
-          </div>
-        </div>
-      </div>
-    </div>
+    <JournalBriContent
+      points={points}
+      latestBri={latestBri}
+      latestCumulativeBri={latestCumulativeBri}
+      quizPoints={quizPoints}
+    />
   );
 }
 

@@ -38,6 +38,7 @@ firebase-debug.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+.env.local.bak
 venv/
 .venv
 modules/engine/venv/
@@ -52,6 +53,33 @@ __pycache__/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# personal docs
+docs/Capstone/individual_contribution_summary.md
+docs/Capstone/Individual Contribution Summary.md
+docs/Capstone/TODO.md
+docs/Capstone/.obsidian/
+docs/Capstone/report notes.md
+my_commits.txt
+export_my_commits.py
+outstanding_issues.md
+
+# course report PDFs (unrelated to app)
+*.pdf
+
+# generated demo profile data (ephemeral output)
+example_profiles/*.json
+
+# one-off generation / utility scripts
+example_profiles/generate_journals.ts
+scripts/rebalance-demo-scores.ts
+
+# claude code / ai agent config
+.claude/
+materials/CLAUDE.md
+materials/GEMINI.md
+materials/AGENTS.md
+materials/settings.local.json
 
 # firebase
 firebase-admin-service-account.json
